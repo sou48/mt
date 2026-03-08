@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="多言語翻訳チャットシステム - 外国語メールやメッセージをAIで翻訳・返信支援" />
+  <title>MultiTranslate - 多言語翻訳チャット</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="styles/main.css" />
+</head>
+<body>
+  <!-- アプリコンテナ -->
+  <div id="app" class="app-container">
+
+    <!-- ===== サイドバー ===== -->
+    <aside id="sidebar" class="sidebar">
+      <!-- ロゴ -->
+      <div class="sidebar-header">
+        <div class="logo">
+          <div class="logo-icon">🌐</div>
+          <div class="logo-text">
+            <span class="logo-title">MultiTranslate</span>
+            <span class="logo-sub">多言語翻訳チャット</span>
+          </div>
+        </div>
+        <button id="btn-new-company" class="btn-icon" title="新規会社を追加">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        </button>
+      </div>
+
+      <!-- 検索 -->
+      <div class="sidebar-search">
+        <div class="search-input-wrap">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" id="sidebar-search" class="search-input" placeholder="会社・案件を検索..." />
+        </div>
+      </div>
+
+      <!-- 会社・案件一覧 -->
+      <nav id="company-list" class="company-list">
+        <!-- JSで動的生成 -->
+      </nav>
+
+      <!-- サイドバーフッター -->
+      <div class="sidebar-footer">
+        <button id="btn-settings" class="sidebar-footer-btn" title="設定">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M4.93 4.93a10 10 0 0 0 0 14.14"/></svg>
+          設定
+        </button>
+        <button id="btn-dictionary" class="sidebar-footer-btn" title="翻訳辞書">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/></svg>
+          辞書
+        </button>
+      </div>
+    </aside>
+
+    <!-- ===== メインエリア ===== -->
+    <main id="main" class="main-area">
+
+      <!-- チャット未選択時の空画面 -->
+      <div id="empty-state" class="empty-state">
+        <div class="empty-icon">💬</div>
+        <h2>会話を選択してください</h2>
+        <p>左のサイドバーから会社・案件を選択するか、<br />新規会社を追加して開始してください。</p>
+        <button id="btn-start-new" class="btn-primary btn-large">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          新規会社を追加
+        </button>
+      </div>
+
+      <!-- チャット画面 -->
+      <div id="chat-panel" class="chat-panel hidden">
+
+        <!-- チャットヘッダー -->
+        <header class="chat-header">
+          <div class="chat-header-left">
+            <button id="btn-back" class="btn-icon mobile-only" title="戻る">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <div class="chat-header-info">
+              <div class="chat-company-name" id="header-company-name">会社名</div>
+              <div class="chat-thread-name" id="header-thread-name">案件名</div>
+            </div>
+          </div>
+          <div class="chat-header-right">
+            <!-- 言語選択 -->
+            <div class="lang-selector-wrap">
+              <label class="lang-label">相手言語</label>
+              <select id="lang-selector" class="lang-selector">
+                <option value="auto">自動判定</option>
+                <option value="en">英語</option>
+                <option value="zh">中国語（簡体）</option>
+                <option value="zh-TW">中国語（繁体）</option>
+                <option value="ko">韓国語</option>
+                <option value="es">スペイン語</option>
+                <option value="fr">フランス語</option>
+                <option value="de">ドイツ語</option>
+                <option value="it">イタリア語</option>
+                <option value="pt">ポルトガル語</option>
+                <option value="ar">アラビア語</option>
+                <option value="th">タイ語</option>
+                <option value="vi">ベトナム語</option>
+              </select>
+            </div>
+            <!-- トーン選択 -->
+            <div class="tone-selector-wrap">
+              <label class="lang-label">翻訳トーン</label>
+              <select id="tone-selector" class="lang-selector">
+                <option value="auto">AI自動</option>
+                <option value="formal">ビジネス正式</option>
+                <option value="standard">ビジネス標準</option>
+                <option value="friendly">ややフレンドリー</option>
+              </select>
+            </div>
+            <!-- スレッドメニュー -->
+            <button id="btn-new-thread" class="btn-icon" title="新規案件を追加">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+            </button>
+            <button id="btn-ai-assist" class="btn-icon btn-ai" title="AI返信支援">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              AI支援
+            </button>
+          </div>
+        </header>
+
+        <!-- メッセージエリア -->
+        <div id="message-area" class="message-area">
+          <!-- メッセージはJSで動的生成 -->
+        </div>
+
+        <!-- 受信メッセージ入力エリア -->
+        <div id="receive-input-area" class="receive-input-area hidden">
+          <div class="receive-input-header">
+            <span>📥 受信メッセージを貼り付け</span>
+            <button id="btn-close-receive" class="btn-icon-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <textarea id="receive-text" class="receive-textarea" placeholder="相手からのメッセージをここに貼り付けてください..."></textarea>
+          <div class="receive-input-footer">
+            <div class="receive-channel">
+              <label>チャネル：</label>
+              <select id="receive-channel" class="select-sm">
+                <option value="chat">チャット</option>
+                <option value="mail">メール</option>
+              </select>
+            </div>
+            <div id="mail-subject-row" class="mail-subject-row hidden">
+              <label>件名：</label>
+              <input type="text" id="mail-subject" class="input-sm" placeholder="メール件名" />
+            </div>
+            <button id="btn-translate-receive" class="btn-primary">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+              翻訳して取り込む
+            </button>
+          </div>
+        </div>
+
+        <!-- 送信入力エリア -->
+        <footer class="chat-footer">
+          <div class="footer-actions-top">
+            <button id="btn-receive-msg" class="btn-secondary btn-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              受信取り込み
+            </button>
+            <button id="btn-signature" class="btn-secondary btn-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 12h.01"/><path d="M7 7h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"/></svg>
+              署名
+            </button>
+            <button id="btn-attach" class="btn-secondary btn-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
+              添付
+            </button>
+          </div>
+          <div class="input-wrap">
+            <textarea id="send-input" class="send-textarea" placeholder="日本語でメッセージを入力してください..." rows="3"></textarea>
+            <div class="send-actions">
+              <button id="btn-ai-draft" class="btn-icon" title="AI下書き生成">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+              </button>
+              <button id="btn-translate-send" class="btn-translate" title="翻訳プレビュー">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg>
+                翻訳
+              </button>
+              <button id="btn-send" class="btn-send" title="送信">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+                送信
+              </button>
+            </div>
+          </div>
+        </footer>
+      </div>
+    </main>
+  </div>
+
+  <!-- ===== モーダル類 ===== -->
+
+  <!-- AI支援サイドパネル -->
+  <div id="ai-panel" class="ai-panel hidden">
+    <div class="ai-panel-header">
+      <h3>🤖 AI返信支援</h3>
+      <button id="btn-close-ai" class="btn-icon-sm">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+      </button>
+    </div>
+    <div class="ai-panel-body">
+      <div class="ai-context-info">
+        <p>最近の会話を踏まえてAIが返信下書きを作成します。</p>
+      </div>
+      <div class="ai-instruction-wrap">
+        <label>指示（任意）</label>
+        <textarea id="ai-instruction" class="ai-instruction-area" placeholder="例：もう少し丁寧に、簡潔に、相手に配慮した表現に..."></textarea>
+      </div>
+      <button id="btn-generate-draft" class="btn-primary btn-full">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+        下書きを生成
+      </button>
+      <div id="ai-draft-output" class="ai-draft-output hidden">
+        <h4>生成された下書き</h4>
+        <div id="ai-draft-text" class="ai-draft-text"></div>
+        <div class="ai-draft-actions">
+          <button id="btn-use-draft" class="btn-primary">入力欄に挿入</button>
+          <button id="btn-regen-draft" class="btn-secondary">再生成</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 設定モーダル -->
+  <div id="settings-modal" class="modal-overlay hidden">
+    <div class="modal-container settings-modal">
+      <div class="modal-header">
+        <h2>⚙️ 設定</h2>
+        <button id="btn-close-settings" class="btn-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-tabs">
+          <button class="tab-btn active" data-tab="api">APIキー</button>
+          <button class="tab-btn" data-tab="signature">署名</button>
+          <button class="tab-btn" data-tab="general">一般</button>
+        </div>
+
+        <!-- APIキータブ -->
+        <div id="tab-api" class="tab-content active">
+          <div class="settings-section">
+            <h3>AI プロバイダー設定</h3>
+            <p class="settings-note">いずれかのAPIキーを設定すると実際のAI翻訳が有効になります。未設定の場合はモック翻訳で動作します。</p>
+            <div class="form-group">
+              <label>使用するAIプロバイダー</label>
+              <select id="ai-provider" class="form-control">
+                <option value="mock">モック（テスト用）</option>
+                <option value="openai">OpenAI (GPT)</option>
+                <option value="gemini">Google Gemini</option>
+                <option value="claude">Anthropic Claude</option>
+              </select>
+            </div>
+            <div class="form-group" id="openai-key-group">
+              <label>OpenAI APIキー</label>
+              <input type="password" id="openai-api-key" class="form-control" placeholder="sk-..." />
+            </div>
+            <div class="form-group" id="gemini-key-group">
+              <label>Google Gemini APIキー</label>
+              <input type="password" id="gemini-api-key" class="form-control" placeholder="AIza..." />
+            </div>
+            <div class="form-group" id="claude-key-group">
+              <label>Anthropic Claude APIキー</label>
+              <input type="password" id="claude-api-key" class="form-control" placeholder="sk-ant-..." />
+            </div>
+          </div>
+        </div>
+
+        <!-- 署名タブ -->
+        <div id="tab-signature" class="tab-content hidden">
+          <div class="settings-section">
+            <h3>署名テンプレート管理</h3>
+            <div id="signature-list" class="signature-list">
+              <!-- JSで動的生成 -->
+            </div>
+            <button id="btn-add-signature" class="btn-secondary btn-sm">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+              署名を追加
+            </button>
+          </div>
+        </div>
+
+        <!-- 一般タブ -->
+        <div id="tab-general" class="tab-content hidden">
+          <div class="settings-section">
+            <h3>ユーザー情報</h3>
+            <div class="form-group">
+              <label>ユーザー名</label>
+              <input type="text" id="user-name" class="form-control" placeholder="山田 太郎" />
+            </div>
+            <div class="form-group">
+              <label>デフォルト翻訳トーン</label>
+              <select id="default-tone" class="form-control">
+                <option value="auto">AI自動判断</option>
+                <option value="formal">ビジネス正式</option>
+                <option value="standard">ビジネス標準</option>
+                <option value="friendly">ややフレンドリー</option>
+              </select>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-save-settings" class="btn-primary">保存</button>
+        <button id="btn-cancel-settings" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 翻訳辞書モーダル -->
+  <div id="dictionary-modal" class="modal-overlay hidden">
+    <div class="modal-container">
+      <div class="modal-header">
+        <h2>📖 翻訳辞書</h2>
+        <button id="btn-close-dictionary" class="btn-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="settings-tabs">
+          <button class="dict-tab-btn active" data-dict-tab="company">会社共通辞書</button>
+          <button class="dict-tab-btn" data-dict-tab="thread">案件辞書</button>
+        </div>
+        <div id="dict-tab-company" class="tab-content active">
+          <div class="dict-list" id="company-dict-list"></div>
+          <div class="dict-add-row">
+            <input type="text" id="dict-ja-word" class="form-control" placeholder="日本語（元の語）" />
+            <span>→</span>
+            <input type="text" id="dict-trans-word" class="form-control" placeholder="翻訳後（固定）" />
+            <button id="btn-add-dict-entry" class="btn-primary btn-sm">追加</button>
+          </div>
+        </div>
+        <div id="dict-tab-thread" class="tab-content hidden">
+          <p class="settings-note">案件を選択中の場合、その案件専用の辞書を編集できます。</p>
+          <div class="dict-list" id="thread-dict-list"></div>
+          <div class="dict-add-row">
+            <input type="text" id="dict-thread-ja" class="form-control" placeholder="日本語（元の語）" />
+            <span>→</span>
+            <input type="text" id="dict-thread-trans" class="form-control" placeholder="翻訳後（固定）" />
+            <button id="btn-add-thread-dict" class="btn-primary btn-sm">追加</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新規会社モーダル -->
+  <div id="new-company-modal" class="modal-overlay hidden">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h2>🏢 新規会社を追加</h2>
+        <button id="btn-close-new-company" class="btn-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>会社名 <span class="required">*</span></label>
+          <input type="text" id="new-company-name" class="form-control" placeholder="例：ABC Corporation" />
+        </div>
+        <div class="form-group">
+          <label>デフォルト言語</label>
+          <select id="new-company-lang" class="form-control">
+            <option value="auto">自動判定</option>
+            <option value="en">英語</option>
+            <option value="zh">中国語（簡体）</option>
+            <option value="zh-TW">中国語（繁体）</option>
+            <option value="ko">韓国語</option>
+            <option value="es">スペイン語</option>
+            <option value="fr">フランス語</option>
+            <option value="de">ドイツ語</option>
+            <option value="th">タイ語</option>
+            <option value="vi">ベトナム語</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>最初の案件名</label>
+          <input type="text" id="new-company-thread" class="form-control" placeholder="例：資材調達2024" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-create-company" class="btn-primary">作成</button>
+        <button id="btn-cancel-company" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 新規案件モーダル -->
+  <div id="new-thread-modal" class="modal-overlay hidden">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h2>📁 新規案件を追加</h2>
+        <button id="btn-close-new-thread" class="btn-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>案件名 <span class="required">*</span></label>
+          <input type="text" id="new-thread-name" class="form-control" placeholder="例：見積依頼2024" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-create-thread" class="btn-primary">作成</button>
+        <button id="btn-cancel-thread" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 署名選択モーダル -->
+  <div id="signature-select-modal" class="modal-overlay hidden">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h2>✍️ 署名を選択</h2>
+        <button id="btn-close-sig-select" class="btn-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div id="sig-select-list" class="sig-select-list"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- トースト通知 -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- JSファイル読み込み -->
+  <script src="js/storage.js"></script>
+  <script src="js/ai-gateway.js"></script>
+  <script src="js/translator.js"></script>
+  <script src="js/sidebar.js"></script>
+  <script src="js/chat.js"></script>
+  <script src="js/modals.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

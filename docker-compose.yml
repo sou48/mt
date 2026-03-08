@@ -1,0 +1,17 @@
+services:
+  multi-translate:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: multi-translate
+    ports:
+      # ポート3000は別システム(Next.js)が使用中のため3001を使用
+      # アクセスURL: http://localhost:3001/mt/
+      - "3001:80"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
