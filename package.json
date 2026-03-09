@@ -1,0 +1,13 @@
+{
+  "name": "multi-translate",
+  "version": "1.0.0",
+  "description": "MultiTranslate - 多言語翻訳チャットシステム",
+  "main": "server.js",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.22.1"
+  }
+}
