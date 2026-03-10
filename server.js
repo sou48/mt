@@ -2,13 +2,14 @@ const express = require('express');
 const path = require('path');
 const app = express();
 const port = 3001;
+const staticDir = path.join(__dirname);
 
-// /mt サブパスで静的ファイルを配信
-app.use('/mt', express.static(path.join(__dirname, './')));
+app.use('/assets', express.static(path.join(staticDir, 'assets')));
+app.use('/styles', express.static(path.join(staticDir, 'styles')));
+app.use('/js', express.static(path.join(staticDir, 'js')));
 
-// ルートアクセス時は /mt/ へリダイレクト
 app.get('/', (req, res) => {
-    res.redirect('/mt/');
+    res.sendFile(path.join(staticDir, 'index.html'));
 });
 
 // ヘルスチェック用
@@ -19,6 +20,6 @@ app.get('/health', (req, res) => {
 app.listen(port, () => {
     console.log(`-----------------------------------------------`);
     console.log(` MultiTranslate is running at:`);
-    console.log(` > Local: http://localhost:${port}/mt/`);
+    console.log(` > Local: http://localhost:${port}/`);
     console.log(`-----------------------------------------------`);
 });
