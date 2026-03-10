@@ -1,0 +1,24 @@
+http:
+  routers:
+    mt:
+      rule: Host(`mt.trialworks.jp`)
+      entryPoints:
+        - web
+      service: mt-service
+
+    oos:
+      rule: Host(`oos.trialworks.jp`) || PathPrefix(`/oos`)
+      entryPoints:
+        - web
+      service: oos-service
+
+  services:
+    mt-service:
+      loadBalancer:
+        servers:
+          - url: http://mt-web:80
+
+    oos-service:
+      loadBalancer:
+        servers:
+          - url: http://oos-nginx-1:80

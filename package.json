@@ -4,6 +4,13 @@
   "description": "MultiTranslate - 多言語翻訳チャットシステム",
   "main": "server.js",
   "scripts": {
+    "risk:gate": "./tools/risk-gate/run.sh --mode local",
+    "risk:gate:all": "./tools/risk-gate/run.sh --mode local --scope all",
+    "risk:gate:ci": "./tools/risk-gate/run.sh --mode ci --scope all",
+    "hooks:install": "./tools/risk-gate/install-hooks.sh",
+    "deploy:infra-proxy:conoha": "./tools/deploy/deploy-infra-proxy-conoha.sh",
+    "deploy:conoha": "./tools/deploy/deploy-conoha.sh",
+    "deploy:conoha:status": "./tools/deploy/status-conoha.sh",
     "dev": "node server.js",
     "start": "node server.js"
   },

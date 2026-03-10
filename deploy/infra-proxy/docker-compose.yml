@@ -1,0 +1,31 @@
+name: infra-proxy
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: infra-traefik
+    restart: unless-stopped
+    command:
+      - --api.dashboard=true
+      - --providers.file.directory=/dynamic
+      - --providers.file.watch=true
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      - ./letsencrypt:/letsencrypt
+      - ./dynamic:/dynamic:ro
+    networks:
+      - shared_proxy_net
+
+networks:
+  shared_proxy_net:
+    external: true

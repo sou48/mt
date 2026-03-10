@@ -1,0 +1,10 @@
+services:
+  mt-web:
+    container_name: mt-web-local
+    ports:
+      - "3001:80"
+
+  mt-db:
+    container_name: mt-db-local
+    ports:
+      - "127.0.0.1:55432:5432"

@@ -1,17 +1,36 @@
+name: mt
+
 services:
-  multi-translate:
+  mt-web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: multi-translate
-    ports:
-      # ポート3000は別システム(Next.js)が使用中のため3001を使用
-      # アクセスURL: http://localhost:3001/mt/
-      - "3001:80"
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://localhost/health"]
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
       interval: 30s
       timeout: 3s
       retries: 3
       start_period: 5s
+    networks:
+      - mt_internal_net
+
+  mt-db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${MT_DB_NAME:-mt}
+      POSTGRES_USER: ${MT_DB_USER:-mt_user}
+      POSTGRES_PASSWORD: ${MT_DB_PASSWORD:-mt_local_password}
+    volumes:
+      - mt_pgdata:/var/lib/postgresql/data
+    networks:
+      - mt_internal_net
+
+networks:
+  mt_internal_net:
+    name: mt_internal_net
+
+volumes:
+  mt_pgdata:
+    name: mt_pgdata

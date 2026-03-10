@@ -1,0 +1,13 @@
+services:
+  mt-web:
+    container_name: mt-web
+    networks:
+      - mt_internal_net
+      - shared_proxy_net
+
+  mt-db:
+    container_name: mt-db
+
+networks:
+  shared_proxy_net:
+    external: true
