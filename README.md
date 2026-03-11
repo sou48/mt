@@ -68,7 +68,7 @@ npm run hooks:install
 
 ## Traefik を使った本番構成
 
-本番では `mt.trialworks.jp` を Traefik が受け、`mt` 専用コンテナへ振り分けます。Traefik は Docker provider ではなく file provider を使い、`shared_proxy_net` 上の各コンテナへルーティングします。
+本番では `mt.trialworks.jp` を Traefik が受け、`mt` 専用コンテナへ振り分けます。Traefik は Docker provider ではなく file provider を使い、`shared_proxy_net` 上の各コンテナへルーティングします。`https` は Let’s Encrypt で証明書を取得し、`http` アクセスは `https` へ恒久リダイレクトします。
 
 ### VPS ディレクトリ構成
 

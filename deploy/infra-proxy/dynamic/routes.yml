@@ -4,7 +4,17 @@ http:
       rule: Host(`mt.trialworks.jp`)
       entryPoints:
         - web
+      middlewares:
+        - mt-https-redirect
+      service: noop@internal
+
+    mt-secure:
+      rule: Host(`mt.trialworks.jp`)
+      entryPoints:
+        - websecure
       service: mt-service
+      tls:
+        certResolver: le
 
     oos:
       rule: Host(`oos.trialworks.jp`) || PathPrefix(`/oos`)
@@ -22,3 +32,9 @@ http:
       loadBalancer:
         servers:
           - url: http://oos-nginx-1:80
+
+  middlewares:
+    mt-https-redirect:
+      redirectScheme:
+        scheme: https
+        permanent: true
