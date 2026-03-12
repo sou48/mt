@@ -6,8 +6,15 @@ services:
       context: .
       dockerfile: Dockerfile
     restart: unless-stopped
+    environment:
+      PORT: 3001
+      DATABASE_URL: postgresql://${MT_DB_USER:-mt_user}:${MT_DB_PASSWORD:-mt_local_password}@mt-db:5432/${MT_DB_NAME:-mt}?schema=public
+      SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
+    depends_on:
+      mt-db:
+        condition: service_healthy
     healthcheck:
-      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/health"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3001/health').then((res)=>{if(!res.ok)process.exit(1)}).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 3s
       retries: 3
@@ -22,6 +29,12 @@ services:
       POSTGRES_DB: ${MT_DB_NAME:-mt}
       POSTGRES_USER: ${MT_DB_USER:-mt_user}
       POSTGRES_PASSWORD: ${MT_DB_PASSWORD:-mt_local_password}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${MT_DB_USER:-mt_user} -d ${MT_DB_NAME:-mt}"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
     volumes:
       - mt_pgdata:/var/lib/postgresql/data
     networks:

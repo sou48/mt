@@ -1,0 +1,256 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum UserRole {
+  user
+  admin
+}
+
+enum MessageType {
+  received
+  reply
+  draft
+}
+
+enum ChannelType {
+  email
+  chat
+  phone_memo
+  other
+}
+
+enum DictionaryScopeType {
+  system
+  company
+}
+
+model Company {
+  id        BigInt            @id @default(autoincrement())
+  name      String            @db.VarChar(255)
+  users     User[]
+  projects  Project[]
+  entries   DictionaryEntry[]
+  createdAt DateTime          @default(now()) @map("created_at")
+  updatedAt DateTime          @updatedAt @map("updated_at")
+  deletedAt DateTime?         @map("deleted_at")
+
+  @@index([name])
+  @@map("companies")
+}
+
+model User {
+  id                       BigInt                   @id @default(autoincrement())
+  companyId                BigInt                   @map("company_id")
+  email                    String                   @unique @db.VarChar(255)
+  displayName              String                   @map("display_name") @db.VarChar(255)
+  role                     UserRole
+  passwordHash             String                   @map("password_hash") @db.VarChar(255)
+  company                  Company                  @relation(fields: [companyId], references: [id])
+  createdProjects          Project[]                @relation("ProjectCreatedBy")
+  registeredMessages       Message[]                @relation("MessageRegisteredBy")
+  createdMessages          Message[]                @relation("MessageCreatedBy")
+  uploadedAttachments      Attachment[]             @relation("AttachmentUploadedBy")
+  signatures               Signature[]
+  createdDictionaryEntries DictionaryEntry[]        @relation("DictionaryEntryCreatedBy")
+  updatedDictionaryEntries DictionaryEntry[]        @relation("DictionaryEntryUpdatedBy")
+  passwordResetTokens      PasswordResetToken[]
+  userProjects             UserProject[]
+  changedMessageHistories  MessageHistory[]         @relation("MessageHistoryChangedBy")
+  changedSignatureHistory  SignatureHistory[]       @relation("SignatureHistoryChangedBy")
+  changedDictionaryHistory DictionaryEntryHistory[] @relation("DictionaryHistoryChangedBy")
+  createdAt                DateTime                 @default(now()) @map("created_at")
+  updatedAt                DateTime                 @updatedAt @map("updated_at")
+  deletedAt                DateTime?                @map("deleted_at")
+
+  @@index([companyId])
+  @@map("users")
+}
+
+model Project {
+  id              BigInt        @id @default(autoincrement())
+  companyId       BigInt        @map("company_id")
+  name            String        @db.VarChar(255)
+  isUnclassified  Boolean       @default(false) @map("is_unclassified")
+  createdByUserId BigInt?       @map("created_by_user_id")
+  company         Company       @relation(fields: [companyId], references: [id])
+  createdByUser   User?         @relation("ProjectCreatedBy", fields: [createdByUserId], references: [id])
+  messages        Message[]
+  userProjects    UserProject[]
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+  deletedAt       DateTime?     @map("deleted_at")
+
+  @@index([companyId])
+  @@index([companyId, name])
+  @@map("projects")
+}
+
+model UserProject {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  projectId BigInt    @map("project_id")
+  user      User      @relation(fields: [userId], references: [id])
+  project   Project   @relation(fields: [projectId], references: [id])
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime  @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@unique([userId, projectId])
+  @@map("user_projects")
+}
+
+model Message {
+  id                           BigInt           @id @default(autoincrement())
+  projectId                    BigInt           @map("project_id")
+  messageType                  MessageType      @map("message_type")
+  channelType                  ChannelType      @map("channel_type")
+  subject                      String?          @db.VarChar(500)
+  sourceSenderName             String?          @map("source_sender_name") @db.VarChar(255)
+  sourceSenderAddressOrAccount String?          @map("source_sender_address_or_account") @db.VarChar(255)
+  sourceSentAt                 DateTime?        @map("source_sent_at")
+  registeredByUserId           BigInt?          @map("registered_by_user_id")
+  createdByUserId              BigInt?          @map("created_by_user_id")
+  sourceText                   String?          @map("source_text") @db.Text
+  sourceLanguage               String?          @map("source_language") @db.VarChar(50)
+  translatedText               String?          @map("translated_text") @db.Text
+  translatedLanguage           String?          @map("translated_language") @db.VarChar(50)
+  japaneseText                 String?          @map("japanese_text") @db.Text
+  partnerText                  String?          @map("partner_text") @db.Text
+  languagePair                 String?          @map("language_pair") @db.VarChar(100)
+  signatureId                  BigInt?          @map("signature_id")
+  signatureSnapshot            String?          @map("signature_snapshot") @db.Text
+  project                      Project          @relation(fields: [projectId], references: [id])
+  registeredByUser             User?            @relation("MessageRegisteredBy", fields: [registeredByUserId], references: [id])
+  createdByUser                User?            @relation("MessageCreatedBy", fields: [createdByUserId], references: [id])
+  signature                    Signature?       @relation(fields: [signatureId], references: [id])
+  attachments                  Attachment[]
+  histories                    MessageHistory[]
+  createdAt                    DateTime         @default(now()) @map("created_at")
+  updatedAt                    DateTime         @updatedAt @map("updated_at")
+  deletedAt                    DateTime?        @map("deleted_at")
+
+  @@index([projectId])
+  @@index([projectId, sourceSentAt, createdAt(sort: Desc)])
+  @@index([messageType])
+  @@index([channelType])
+  @@map("messages")
+}
+
+model Attachment {
+  id               BigInt    @id @default(autoincrement())
+  messageId        BigInt    @map("message_id")
+  originalName     String    @map("original_name") @db.VarChar(255)
+  storedPath       String    @map("stored_path") @db.VarChar(1000)
+  mimeType         String    @map("mime_type") @db.VarChar(255)
+  fileSize         BigInt    @map("file_size")
+  uploadedByUserId BigInt?   @map("uploaded_by_user_id")
+  message          Message   @relation(fields: [messageId], references: [id])
+  uploadedByUser   User?     @relation("AttachmentUploadedBy", fields: [uploadedByUserId], references: [id])
+  createdAt        DateTime  @default(now()) @map("created_at")
+  updatedAt        DateTime  @updatedAt @map("updated_at")
+  deletedAt        DateTime? @map("deleted_at")
+
+  @@index([messageId])
+  @@map("attachments")
+}
+
+model Signature {
+  id           BigInt             @id @default(autoincrement())
+  userId       BigInt             @map("user_id")
+  name         String             @db.VarChar(255)
+  japaneseText String             @map("japanese_text") @db.Text
+  partnerText  String?            @map("partner_text") @db.Text
+  isDefault    Boolean            @default(false) @map("is_default")
+  user         User               @relation(fields: [userId], references: [id])
+  messages     Message[]
+  histories    SignatureHistory[]
+  createdAt    DateTime           @default(now()) @map("created_at")
+  updatedAt    DateTime           @updatedAt @map("updated_at")
+  deletedAt    DateTime?          @map("deleted_at")
+
+  @@index([userId])
+  @@map("signatures")
+}
+
+model DictionaryEntry {
+  id              BigInt                   @id @default(autoincrement())
+  scopeType       DictionaryScopeType      @map("scope_type")
+  companyId       BigInt?                  @map("company_id")
+  sourceTerm      String                   @map("source_term") @db.VarChar(255)
+  targetTerm      String                   @map("target_term") @db.VarChar(255)
+  note            String?                  @db.Text
+  languagePair    String                   @map("language_pair") @db.VarChar(100)
+  createdByUserId BigInt?                  @map("created_by_user_id")
+  updatedByUserId BigInt?                  @map("updated_by_user_id")
+  company         Company?                 @relation(fields: [companyId], references: [id])
+  createdByUser   User?                    @relation("DictionaryEntryCreatedBy", fields: [createdByUserId], references: [id])
+  updatedByUser   User?                    @relation("DictionaryEntryUpdatedBy", fields: [updatedByUserId], references: [id])
+  histories       DictionaryEntryHistory[]
+  createdAt       DateTime                 @default(now()) @map("created_at")
+  updatedAt       DateTime                 @updatedAt @map("updated_at")
+  deletedAt       DateTime?                @map("deleted_at")
+
+  @@index([scopeType])
+  @@index([companyId])
+  @@index([scopeType, languagePair, sourceTerm])
+  @@map("dictionary_entries")
+}
+
+model PasswordResetToken {
+  id        BigInt    @id @default(autoincrement())
+  userId    BigInt    @map("user_id")
+  tokenHash String    @map("token_hash") @db.VarChar(255)
+  expiresAt DateTime  @map("expires_at")
+  usedAt    DateTime? @map("used_at")
+  user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now()) @map("created_at")
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model MessageHistory {
+  id              BigInt   @id @default(autoincrement())
+  messageId       BigInt   @map("message_id")
+  snapshotJson    Json     @map("snapshot_json")
+  changedByUserId BigInt?  @map("changed_by_user_id")
+  message         Message  @relation(fields: [messageId], references: [id])
+  changedByUser   User?    @relation("MessageHistoryChangedBy", fields: [changedByUserId], references: [id])
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  @@index([messageId])
+  @@map("message_histories")
+}
+
+model SignatureHistory {
+  id              BigInt    @id @default(autoincrement())
+  signatureId     BigInt    @map("signature_id")
+  snapshotJson    Json      @map("snapshot_json")
+  changedByUserId BigInt?   @map("changed_by_user_id")
+  signature       Signature @relation(fields: [signatureId], references: [id])
+  changedByUser   User?     @relation("SignatureHistoryChangedBy", fields: [changedByUserId], references: [id])
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([signatureId])
+  @@map("signature_histories")
+}
+
+model DictionaryEntryHistory {
+  id                BigInt          @id @default(autoincrement())
+  dictionaryEntryId BigInt          @map("dictionary_entry_id")
+  snapshotJson      Json            @map("snapshot_json")
+  changedByUserId   BigInt?         @map("changed_by_user_id")
+  dictionaryEntry   DictionaryEntry @relation(fields: [dictionaryEntryId], references: [id])
+  changedByUser     User?           @relation("DictionaryHistoryChangedBy", fields: [changedByUserId], references: [id])
+  createdAt         DateTime        @default(now()) @map("created_at")
+
+  @@index([dictionaryEntryId])
+  @@map("dictionary_entry_histories")
+}

@@ -2,7 +2,7 @@ services:
   mt-web:
     container_name: mt-web-local
     ports:
-      - "3001:80"
+      - "3001:3001"
 
   mt-db:
     container_name: mt-db-local

@@ -8,6 +8,16 @@
     "risk:gate:all": "./tools/risk-gate/run.sh --mode local --scope all",
     "risk:gate:ci": "./tools/risk-gate/run.sh --mode ci --scope all",
     "hooks:install": "./tools/risk-gate/install-hooks.sh",
+    "db:generate": "prisma generate",
+    "db:format": "prisma format",
+    "db:migrate:dev": "prisma migrate dev",
+    "db:migrate:deploy": "prisma migrate deploy",
+    "db:seed:admin": "node scripts/bootstrap-admin.js",
+    "docker:version": "./tools/docker/docker.sh version",
+    "docker:local:up": "./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml up -d",
+    "docker:local:down": "./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml down",
+    "docker:local:logs": "./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml logs -f",
+    "docker:local:build": "./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml up -d --build",
     "deploy:infra-proxy:conoha": "./tools/deploy/deploy-infra-proxy-conoha.sh",
     "deploy:conoha": "./tools/deploy/deploy-conoha.sh",
     "deploy:conoha:status": "./tools/deploy/status-conoha.sh",
@@ -15,6 +25,13 @@
     "start": "node server.js"
   },
   "dependencies": {
-    "express": "^4.22.1"
+    "@prisma/client": "^6.16.2",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.3.1",
+    "express": "^4.22.1",
+    "express-session": "^1.19.0"
+  },
+  "devDependencies": {
+    "prisma": "^6.16.2"
   }
 }

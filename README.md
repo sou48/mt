@@ -16,24 +16,34 @@ http://localhost:3001/
 
 ```bash
 # ビルドして起動
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d
+npm run docker:local:up
 
 # 停止
-docker compose -f docker-compose.yml -f docker-compose.local.yml down
+npm run docker:local:down
 
 # ログ確認
-docker compose -f docker-compose.yml -f docker-compose.local.yml logs -f
+npm run docker:local:logs
 
 # 再ビルドして起動
-docker compose -f docker-compose.yml -f docker-compose.local.yml up -d --build
+npm run docker:local:build
+```
+
+この WSL では Docker Desktop の共有ソケットを使う前提です。通常の `docker` コマンドがそのまま使えない場合でも、上記 npm script と以下のラッパーで実行できます。
+
+```bash
+./tools/docker/docker.sh version
+./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml ps
 ```
 
 ### ローカル（nginx直接）
 
-nginxがインストールされていれば以下で起動可能：
+Node.js がインストールされていれば以下で起動可能：
 
 ```bash
-nginx -c $(pwd)/nginx.conf -p $(pwd)/ -g "daemon off;"
+cp .env.example .env
+npm install
+npm run db:generate
+npm run dev
 ```
 
 ## 技術スタック
@@ -42,6 +52,15 @@ nginx -c $(pwd)/nginx.conf -p $(pwd)/ -g "daemon off;"
 - **Webサーバー**: Nginx (Docker)
 - **AIプロバイダー**: OpenAI / Google Gemini / Anthropic Claude（API連携）
 - **データ保存**: localStorage（ブラウザ）
+
+## バックエンド設計ドキュメント
+
+- [バックエンド仕様](/home/takeshi/multi-translate/docs/バックエンド仕様.md)
+- [マイグレーション方針](/home/takeshi/multi-translate/docs/マイグレーション方針.md)
+- [テーブル定義確定案](/home/takeshi/multi-translate/docs/テーブル定義確定案.md)
+- [技術選定](/home/takeshi/multi-translate/docs/技術選定.md)
+- [ExecPlan_初期バックエンド実装](/home/takeshi/multi-translate/docs/ExecPlan_初期バックエンド実装.md)
+- [タスク管理](/home/takeshi/multi-translate/docs/タスク管理.md)
 
 ## リスク管理ゲート
 
@@ -165,6 +184,27 @@ git push
 - 翻訳トーン変更（ビジネス正式 / 標準 / フレンドリー）
 - 翻訳辞書機能（会社共通 + 案件別）
 - 署名テンプレート管理
+
+## バックエンド開発の初期コマンド
+
+```bash
+cp .env.example .env
+npm run db:generate
+npm run db:migrate:dev -- --name init
+npm run db:seed:admin
+```
+
+> `db:migrate:dev` は PostgreSQL 起動後に実行します。
+
+初期管理者の投入値は `.env` の以下で変更できます。
+
+```bash
+ADMIN_BOOTSTRAP_COMPANY_NAME=MT管理会社
+ADMIN_BOOTSTRAP_EMAIL=admin@example.com
+ADMIN_BOOTSTRAP_DISPLAY_NAME=初期管理者
+ADMIN_BOOTSTRAP_PASSWORD=change-me-now
+SESSION_COOKIE_SECURE=false
+```
 
 ## APIキー設定
 
