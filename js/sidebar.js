@@ -12,34 +12,32 @@ const Sidebar = {
         this._bindSearch();
     },
 
-    render(filterText = '') {
+    async render(filterText = '') {
         const container = document.getElementById('company-list');
         if (!container) return;
 
-        const companies = Storage.getCompanies();
-        const threads = Storage.getThreads();
+        let companies = Storage.getCompanies();
+        let threads = Storage.getThreads();
 
-        const filtered = filterText
-            ? companies.filter(c =>
-                c.name.toLowerCase().includes(filterText.toLowerCase()) ||
-                threads.filter(t => t.companyId === c.id).some(t =>
-                    t.name.toLowerCase().includes(filterText.toLowerCase())
-                )
-            )
-            : companies;
+        if (filterText) {
+            const searchResult = await Storage.searchSidebar(filterText);
+            companies = searchResult.companies;
+            threads = searchResult.threads;
+        }
+        const filtered = companies;
 
         if (filtered.length === 0) {
-            container.innerHTML = `<div style="padding:24px 16px; text-align:center; color:var(--text-muted); font-size:12px;">
+            Dom.setMarkup(container, `<div style="padding:24px 16px; text-align:center; color:var(--text-muted); font-size:12px;">
         ${filterText ? '検索結果がありません' : '会社を追加してください'}
-      </div>`;
+      </div>`);
             return;
         }
 
-        container.innerHTML = filtered.map(company => {
+        Dom.setMarkup(container, filtered.map(company => {
             const companyThreads = threads.filter(t => t.companyId === company.id);
             const isOpen = this.currentCompanyId === company.id;
             return this._renderCompanyGroup(company, companyThreads, isOpen, filterText);
-        }).join('');
+        }).join(''));
 
         this._bindGroupEvents();
         this._highlightActive();
@@ -123,8 +121,8 @@ const Sidebar = {
     _bindSearch() {
         const searchInput = document.getElementById('sidebar-search');
         if (!searchInput) return;
-        searchInput.addEventListener('input', (e) => {
-            this.render(e.target.value);
+        searchInput.addEventListener('input', async (e) => {
+            await this.render(e.target.value);
         });
     },
 
@@ -135,26 +133,28 @@ const Sidebar = {
         });
     },
 
-    selectThread(threadId, companyId) {
+    async selectThread(threadId, companyId) {
         this.currentThreadId = threadId;
         this.currentCompanyId = companyId;
-        this.render(document.getElementById('sidebar-search')?.value || '');
-        Chat.loadThread(threadId);
+        await this.render(document.getElementById('sidebar-search')?.value || '');
+        await Chat.loadThread(threadId);
 
         // モバイル：サイドバーを閉じる
         this._closeMobileSidebar();
     },
 
-    addCompany(company) {
-        Storage.saveCompany(company);
-        this.currentCompanyId = company.id;
-        this.render();
+    async addCompany(company) {
+        const result = await Storage.saveCompany(company);
+        this.currentCompanyId = result.company.id;
+        await this.render();
+        return result;
     },
 
-    addThread(thread) {
-        Storage.saveThread(thread);
-        this.render();
-        this.selectThread(thread.id, thread.companyId);
+    async addThread(thread) {
+        const result = await Storage.saveThread(thread);
+        await this.render();
+        await this.selectThread(result.thread.id, result.thread.companyId);
+        return result;
     },
 
     openMobileSidebar() {

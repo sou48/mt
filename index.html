@@ -175,6 +175,8 @@
               添付
             </button>
           </div>
+          <input type="file" id="attach-input" class="hidden" multiple />
+          <div id="pending-attachments"></div>
           <div class="input-wrap">
             <textarea id="send-input" class="send-textarea" placeholder="日本語でメッセージを入力してください..." rows="3"></textarea>
             <div class="send-actions">
@@ -194,6 +196,28 @@
         </footer>
       </div>
     </main>
+  </div>
+
+  <div id="login-overlay" class="modal-overlay">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h2>🔐 ログイン</h2>
+      </div>
+      <div class="modal-body">
+        <p class="settings-note">MT を利用するにはログインしてください。</p>
+        <div class="form-group">
+          <label>メールアドレス</label>
+          <input type="email" id="login-email" class="form-control" placeholder="admin@example.com" />
+        </div>
+        <div class="form-group">
+          <label>パスワード</label>
+          <input type="password" id="login-password" class="form-control" placeholder="password" />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-login" class="btn-primary">ログイン</button>
+      </div>
+    </div>
   </div>
 
   <!-- ===== モーダル類 ===== -->
@@ -327,7 +351,7 @@
       <div class="modal-body">
         <div class="settings-tabs">
           <button class="dict-tab-btn active" data-dict-tab="company">会社共通辞書</button>
-          <button class="dict-tab-btn" data-dict-tab="thread">案件辞書</button>
+          <button class="dict-tab-btn" data-dict-tab="thread">システム共通辞書</button>
         </div>
         <div id="dict-tab-company" class="tab-content active">
           <div class="dict-list" id="company-dict-list"></div>
@@ -339,7 +363,7 @@
           </div>
         </div>
         <div id="dict-tab-thread" class="tab-content hidden">
-          <p class="settings-note">案件を選択中の場合、その案件専用の辞書を編集できます。</p>
+          <p class="settings-note">全体で共通利用する固定翻訳語を編集できます。</p>
           <div class="dict-list" id="thread-dict-list"></div>
           <div class="dict-add-row">
             <input type="text" id="dict-thread-ja" class="form-control" placeholder="日本語（元の語）" />
@@ -434,6 +458,8 @@
   <div id="toast-container" class="toast-container"></div>
 
   <!-- JSファイル読み込み -->
+  <script src="js/api-client.js"></script>
+  <script src="js/dom-helpers.js"></script>
   <script src="js/storage.js"></script>
   <script src="js/ai-gateway.js"></script>
   <script src="js/translator.js"></script>

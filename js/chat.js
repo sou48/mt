@@ -7,11 +7,11 @@ const Chat = {
     currentThreadId: null,
     currentCompanyId: null,
     pendingTranslation: null, // 翻訳プレビュー中データ
+    pendingAttachments: [],
 
     // スレッドを読み込んで表示
-    loadThread(threadId) {
-        const threads = Storage.getThreads();
-        const thread = threads.find(t => t.id === threadId);
+    async loadThread(threadId) {
+        const thread = Storage.getThreadById(threadId);
         if (!thread) return;
 
         const companies = Storage.getCompanies();
@@ -20,6 +20,7 @@ const Chat = {
         this.currentThreadId = threadId;
         this.currentCompanyId = thread.companyId;
         this.pendingTranslation = null;
+        this.pendingAttachments = [];
 
         // UIの表示切替
         document.getElementById('empty-state').classList.add('hidden');
@@ -35,11 +36,13 @@ const Chat = {
         if (langSel) langSel.value = thread.lang || 'auto';
         if (toneSel) toneSel.value = thread.tone || 'auto';
 
-        // メッセージ描画
+        await Storage.loadCompanyDictionary(thread.companyId);
+        await Storage.loadMessages(threadId);
         this.renderMessages(threadId);
 
         // 送信欄クリア
         document.getElementById('send-input').value = '';
+        this._renderPendingAttachments();
         this._hideSendPreview();
 
         // 受信入力を閉じる
@@ -52,18 +55,18 @@ const Chat = {
         if (!container) return;
 
         if (messages.length === 0) {
-            container.innerHTML = `
+            Dom.setMarkup(container, `
         <div class="empty-state" style="padding:40px 0; background:none;">
           <div class="empty-icon" style="font-size:40px;">💬</div>
           <p style="color:var(--text-muted); font-size:13px;">まだメッセージがありません。<br/>受信メッセージを取り込むか、メッセージを送信してください。</p>
         </div>
-      `;
+      `);
             return;
         }
 
         // 日付でグループ化
         let lastDate = '';
-        container.innerHTML = messages.map(msg => {
+        Dom.setMarkup(container, messages.map(msg => {
             const msgDate = new Date(msg.createdAt).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
             let dateSep = '';
             if (msgDate !== lastDate) {
@@ -71,7 +74,7 @@ const Chat = {
                 lastDate = msgDate;
             }
             return dateSep + this._renderMessage(msg);
-        }).join('');
+        }).join(''));
 
         // 最下部にスクロール
         container.scrollTop = container.scrollHeight;
@@ -95,6 +98,13 @@ const Chat = {
                 ? `<span class="msg-status-badge draft">下書き</span>`
                 : '';
 
+        const attachmentsHtml = Array.isArray(msg.attachments) && msg.attachments.length > 0
+            ? `<div class="msg-attachments">${msg.attachments.map((attachment) => `
+                <a class="msg-attachment-link" href="/api/attachments/${attachment.id}/download" target="_blank" rel="noreferrer">${this._esc(attachment.originalName)}</a>
+              `).join('')}</div>`
+            : '';
+
+        const thread = Storage.getThreadById(msg.threadId);
         const actionsHtml = isReceived
             ? `<div class="msg-actions">
            <button class="msg-action-btn" data-action="copy-translation" data-msg-id="${msg.id}">
@@ -105,6 +115,10 @@ const Chat = {
              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
              原文をコピー
            </button>
+           ${thread?.isUnclassified ? `<button class="msg-action-btn" data-action="reclassify-message" data-msg-id="${msg.id}">
+             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 7h7"/><path d="M14 7h7"/><path d="M10 7l4 4-4 4"/></svg>
+             正式案件へ振り替え
+           </button>` : ''}
          </div>`
             : `<div class="msg-actions">
            <button class="msg-action-btn primary" data-action="edit-retranslate" data-msg-id="${msg.id}">
@@ -129,6 +143,7 @@ const Chat = {
         <div class="msg-original" id="original-${msg.id}">${this._esc(msg.originalText)}</div>
         <hr class="msg-divider" />
         <div class="msg-translation" id="translation-${msg.id}">${this._esc(msg.translatedText)}</div>
+        ${attachmentsHtml}
         <div class="msg-meta">
           <span>${timeStr}</span>
           ${statusHtml}
@@ -225,7 +240,7 @@ const Chat = {
         } finally {
             if (btn) {
                 btn.disabled = false;
-                btn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> 翻訳`;
+                Dom.setMarkup(btn, `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> 翻訳`);
             }
         }
     },
@@ -245,10 +260,20 @@ const Chat = {
                 translatedText: this.pendingTranslation.translatedText,
                 threadId: this.currentThreadId,
                 tone: this.pendingTranslation.tone,
+                signatureBody: null,
             });
+
+            if (this.pendingAttachments.length > 0) {
+                for (const attachment of this.pendingAttachments) {
+                    await Storage.uploadAttachment(msg.id, attachment);
+                }
+                await Storage.loadMessages(this.currentThreadId);
+            }
 
             document.getElementById('send-input').value = '';
             this.pendingTranslation = null;
+            this.pendingAttachments = [];
+            this._renderPendingAttachments();
             this._hideSendPreview();
             this.renderMessages(this.currentThreadId);
             Toast.show('送信しました', 'success');
@@ -285,7 +310,7 @@ const Chat = {
       max-height: 220px;
       overflow-y: auto;
     `;
-        preview.innerHTML = `
+        Dom.setMarkup(preview, `
       <div style="font-size:11px; color:var(--primary-400); margin-bottom:6px; font-weight:600;">🌐 翻訳プレビュー（${getLangLabel(result.targetLang)}）</div>
       ${mockBadge}
       <div style="font-size:13.5px; color:var(--text-primary); white-space:pre-wrap; line-height:1.6;">${this._esc(result.translatedText)}</div>
@@ -293,7 +318,7 @@ const Chat = {
         <button id="btn-confirm-send" style="background:linear-gradient(135deg,#5B52F0,#6C63FF); color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">✓ この内容で送信</button>
         <button id="btn-cancel-preview" style="background:var(--bg-glass); border:1px solid var(--border-default); border-radius:8px; padding:6px 12px; font-size:12px; color:var(--text-secondary); cursor:pointer;">キャンセル</button>
       </div>
-    `;
+    `);
 
         const footer = document.querySelector('.chat-footer');
         footer?.parentNode?.insertBefore(preview, footer);
@@ -312,7 +337,7 @@ const Chat = {
     // ===== メッセージ操作（編集・再翻訳） =====
 
     async handleEditRetranslate(msgId) {
-        const allMessages = JSON.parse(localStorage.getItem('mt_messages') || '[]');
+        const allMessages = Object.values(Storage._cache.messagesByThread).flat();
         const msg = allMessages.find(m => m.id === msgId);
         if (!msg) return;
 
@@ -330,7 +355,7 @@ const Chat = {
         const group = document.querySelector(`[data-msg-id="${msgId}"]`);
         const editBtn = group?.querySelector('[data-action="edit-retranslate"]');
         if (editBtn) {
-            editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> 再翻訳して確定`;
+            Dom.setMarkup(editBtn, `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 8l6 6"/><path d="m4 14 6-6 2-3"/><path d="M2 5h12"/><path d="M7 2h1"/><path d="m22 22-5-10-5 10"/><path d="M14 18h6"/></svg> 再翻訳して確定`);
             editBtn.classList.add('primary');
             editBtn.dataset.action = 'confirm-retranslate';
         }
@@ -349,7 +374,7 @@ const Chat = {
         originalEl.classList.remove('editable-active');
 
         // 翻訳中表示
-        translationEl.innerHTML = `翻訳中 <span class="translating-dots"><span></span><span></span><span></span></span>`;
+        Dom.setMarkup(translationEl, `翻訳中 <span class="translating-dots"><span></span><span></span><span></span></span>`);
         translationEl.classList.add('translating');
 
         const tone = document.getElementById('tone-selector')?.value || 'auto';
@@ -372,7 +397,7 @@ const Chat = {
         const group = document.querySelector(`[data-msg-id="${msgId}"]`);
         const editBtn = group?.querySelector('[data-action="confirm-retranslate"]');
         if (editBtn) {
-            editBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 日本語を編集・再翻訳`;
+            Dom.setMarkup(editBtn, `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> 日本語を編集・再翻訳`);
             editBtn.dataset.action = 'edit-retranslate';
         }
     },
@@ -385,7 +410,7 @@ const Chat = {
 
         const translationEl = document.getElementById(`translation-${msgId}`);
         if (translationEl) {
-            translationEl.innerHTML = `翻訳中 <span class="translating-dots"><span></span><span></span><span></span></span>`;
+            Dom.setMarkup(translationEl, `翻訳中 <span class="translating-dots"><span></span><span></span><span></span></span>`);
             translationEl.classList.add('translating');
         }
 
@@ -437,22 +462,51 @@ const Chat = {
                     case 'retranslate-tone':
                         await this.handleRetranslateTone(msgId);
                         break;
+                    case 'reclassify-message':
+                        await this.handleReclassifyMessage(msgId);
+                        break;
                 }
             });
         });
     },
 
+    async handleReclassifyMessage(msgId) {
+        const candidateThreads = Storage.getThreads(this.currentCompanyId).filter(
+            (thread) => thread.id !== this.currentThreadId && !thread.isUnclassified
+        );
+        if (candidateThreads.length === 0) {
+            Toast.show('振り替え先の正式案件がありません', 'error');
+            return;
+        }
+
+        const label = candidateThreads.map((thread, index) => `${index + 1}: ${thread.name}`).join('\n');
+        const answer = prompt(`振り替え先の案件番号を入力してください:\n${label}`);
+        const selected = candidateThreads[Number(answer) - 1];
+        if (!selected) {
+            return;
+        }
+
+        try {
+            await Storage.moveMessage(msgId, selected.id);
+            await Storage.loadMessages(this.currentThreadId);
+            Toast.show(`「${selected.name}」へ振り替えました`, 'success');
+            this.renderMessages(this.currentThreadId);
+        } catch (error) {
+            Toast.show(`振り替えエラー: ${error.message}`, 'error');
+        }
+    },
+
     // ===== 言語・トーン変更 =====
 
-    handleLangChange(lang) {
+    async handleLangChange(lang) {
         if (!this.currentThreadId) return;
-        Translator.updateThreadLang(this.currentThreadId, lang);
+        await Translator.updateThreadLang(this.currentThreadId, lang);
         Toast.show(`相手言語を「${getLangLabel(lang)}」に変更しました`, 'info');
     },
 
-    handleToneChange(tone) {
+    async handleToneChange(tone) {
         if (!this.currentThreadId) return;
-        Translator.updateThreadTone(this.currentThreadId, tone);
+        await Translator.updateThreadTone(this.currentThreadId, tone);
         const labels = { auto: 'AI自動', formal: 'ビジネス正式', standard: 'ビジネス標準', friendly: 'ややフレンドリー' };
         Toast.show(`翻訳トーンを「${labels[tone] || tone}」に変更しました`, 'info');
     },
@@ -465,19 +519,68 @@ const Chat = {
         const div = document.createElement('div');
         div.id = 'loading-bubble';
         div.className = `message-group ${direction}`;
-        div.innerHTML = `
+        Dom.setMarkup(div, `
       <div class="bubble-wrap">
         <div class="msg-translation translating">
           翻訳中 <span class="translating-dots"><span></span><span></span><span></span></span>
         </div>
       </div>
-    `;
+    `);
         container.appendChild(div);
         container.scrollTop = container.scrollHeight;
     },
 
     _removeLoadingBubble() {
         document.getElementById('loading-bubble')?.remove();
+    },
+
+    async handleAttachFiles(files) {
+        const list = Array.from(files || []);
+        this.pendingAttachments = await Promise.all(
+            list.map(async (file) => ({
+                originalName: file.name,
+                mimeType: file.type || 'application/octet-stream',
+                contentBase64: await this._fileToBase64(file),
+            }))
+        );
+        this._renderPendingAttachments();
+        Toast.show(`${this.pendingAttachments.length} 件の添付を準備しました`, 'info');
+    },
+
+    _renderPendingAttachments() {
+        const container = document.getElementById('pending-attachments');
+        if (!container) return;
+        if (this.pendingAttachments.length === 0) {
+            Dom.clear(container);
+            return;
+        }
+
+        Dom.setMarkup(container, this.pendingAttachments
+            .map(
+                (attachment, index) => `<div class="sig-item" style="margin:4px 0;">
+                <div class="sig-item-header">
+                  <span class="sig-item-name">${this._esc(attachment.originalName)}</span>
+                  <button class="btn-icon-sm" data-remove-pending-attachment="${index}" title="削除">×</button>
+                </div>
+              </div>`
+            )
+            .join(''));
+
+        container.querySelectorAll('[data-remove-pending-attachment]').forEach((button) => {
+            button.addEventListener('click', () => {
+                this.pendingAttachments.splice(Number(button.dataset.removePendingAttachment), 1);
+                this._renderPendingAttachments();
+            });
+        });
+    },
+
+    _fileToBase64(file) {
+        return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result).split(',')[1]);
+            reader.onerror = reject;
+            reader.readAsDataURL(file);
+        });
     },
 
     _esc(str) {

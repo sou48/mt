@@ -1,30 +1,23 @@
 /**
- * translator.js - 翻訳ロジック（辞書適用・言語判定・トーン管理）
- * MultiTranslate
+ * translator.js - 翻訳ロジック
  */
 
 const Translator = {
-    /**
-     * 受信メッセージを翻訳してストレージに保存する
-     */
     async translateReceived({ text, threadId, channel, subject, detectedLang }) {
-        const thread = Storage.getThreads().find(t => t.id === threadId);
-        if (!thread) throw new Error('スレッドが見つかりません');
+        const thread = Storage.getThreadById(threadId);
+        if (!thread) throw new Error('案件が見つかりません');
 
-        // 辞書の結合（スレッド辞書 → 会社共通辞書）
         const dictionary = [
-            ...Storage.getDictThread(threadId),
-            ...Storage.getDictCompany(),
+            ...Storage.getSystemDictionary(),
+            ...Storage.getCompanyDictionary(thread.companyId),
         ];
 
-        // 言語が未指定なら自動判定
         let sourceLang = thread.lang !== 'auto' ? thread.lang : (detectedLang || 'auto');
         let actualDetectedLang = sourceLang;
         if (sourceLang === 'auto') {
             actualDetectedLang = await AIGateway.detectLanguage(text);
         }
 
-        // 翻訳実行
         const result = await AIGateway.translate({
             text,
             targetLang: 'ja',
@@ -35,46 +28,35 @@ const Translator = {
             direction: 'receive',
         });
 
-        // メッセージを保存
-        const message = {
-            id: generateId('m'),
-            threadId,
-            direction: 'received',
-            channel: channel || 'chat',
+        const message = await Storage.saveReceivedMessage({
+            projectId: threadId,
+            channelType: channel === 'mail' ? 'email' : 'chat',
             subject: subject || null,
-            originalText: text,
+            sourceText: text,
+            sourceLanguage: result.detectedLang || actualDetectedLang,
             translatedText: result.translatedText,
-            detectedLang: result.detectedLang || actualDetectedLang,
-            status: 'received',
-            createdAt: new Date().toISOString(),
-        };
-        Storage.saveMessage(message);
+            translatedLanguage: 'ja',
+            japaneseText: result.translatedText,
+        });
 
-        // スレッドの言語を更新（自動判定の場合）
         if (thread.lang === 'auto' && result.detectedLang) {
-            Storage.saveThread({ ...thread, lang: result.detectedLang });
+            await Storage.saveProjectPreference(threadId, { lang: result.detectedLang });
         }
 
         return message;
     },
 
-    /**
-     * 送信メッセージを翻訳する（プレビュー・保存）
-     */
     async translateSend({ text, threadId, tone }) {
-        const thread = Storage.getThreads().find(t => t.id === threadId);
-        if (!thread) throw new Error('スレッドが見つかりません');
+        const thread = Storage.getThreadById(threadId);
+        if (!thread) throw new Error('案件が見つかりません');
 
         const targetLang = thread.lang === 'auto' ? 'en' : thread.lang;
         const useTone = tone || thread.tone || 'auto';
-
-        // 辞書の結合
         const dictionary = [
-            ...Storage.getDictThread(threadId),
-            ...Storage.getDictCompany(),
+            ...Storage.getSystemDictionary(),
+            ...Storage.getCompanyDictionary(thread.companyId),
         ];
 
-        // 翻訳実行
         const result = await AIGateway.translate({
             text,
             targetLang,
@@ -93,105 +75,71 @@ const Translator = {
         };
     },
 
-    /**
-     * 送信メッセージを確定してストレージに保存する
-     */
     async sendMessage({ text, translatedText, threadId, tone, channel, subject, signatureBody }) {
-        const thread = Storage.getThreads().find(t => t.id === threadId);
-        if (!thread) throw new Error('スレッドが見つかりません');
+        const thread = Storage.getThreadById(threadId);
+        if (!thread) throw new Error('案件が見つかりません');
 
-        // 署名がある場合は末尾に追加
-        let finalTranslated = translatedText;
+        let partnerText = translatedText;
         if (signatureBody) {
-            finalTranslated = `${translatedText}\n\n${signatureBody}`;
+            partnerText = `${translatedText}\n\n${signatureBody}`;
         }
 
-        const message = {
-            id: generateId('m'),
-            threadId,
-            direction: 'sent',
-            channel: channel || 'chat',
+        return Storage.saveReplyMessage({
+            projectId: threadId,
+            messageType: 'reply',
+            channelType: channel === 'mail' ? 'email' : 'chat',
             subject: subject || null,
-            originalText: text,
-            translatedText: finalTranslated,
-            detectedLang: thread.lang || 'en',
-            tone: tone || thread.tone || 'auto',
-            status: 'sent',
-            createdAt: new Date().toISOString(),
-        };
-        Storage.saveMessage(message);
-        return message;
+            japaneseText: text,
+            partnerText,
+            translatedText: partnerText,
+            translatedLanguage: thread.lang === 'auto' ? 'en' : thread.lang,
+            languagePair: `ja<>${thread.lang === 'auto' ? 'en' : thread.lang}`,
+        });
     },
 
-    /**
-     * 既存メッセージを再翻訳する
-     */
     async retranslate({ messageId, newJaText, tone, instruction }) {
-        const allMessages = JSON.parse(localStorage.getItem('mt_messages') || '[]');
-        const msg = allMessages.find(m => m.id === messageId);
-        if (!msg) throw new Error('メッセージが見つかりません');
+        const allMessages = Object.values(Storage._cache.messagesByThread).flat();
+        const message = allMessages.find((item) => item.id === messageId);
+        if (!message) throw new Error('メッセージが見つかりません');
 
-        const thread = Storage.getThreads().find(t => t.id === msg.threadId);
-        if (!thread) throw new Error('スレッドが見つかりません');
+        const thread = Storage.getThreadById(message.threadId);
+        if (!thread) throw new Error('案件が見つかりません');
 
-        const targetLang = thread.lang === 'auto' ? 'en' : thread.lang;
-
+        const textToTranslate = newJaText || message.originalText;
         const dictionary = [
-            ...Storage.getDictThread(msg.threadId),
-            ...Storage.getDictCompany(),
+            ...Storage.getSystemDictionary(),
+            ...Storage.getCompanyDictionary(thread.companyId),
         ];
 
-        // 改善指示がある場合は指示として含める
-        let textToTranslate = newJaText || msg.originalText;
-        let extraInstruction = instruction ? `\n\n改善指示: ${instruction}` : '';
-
         const result = await AIGateway.translate({
-            text: textToTranslate + extraInstruction,
-            targetLang,
+            text: instruction ? `${textToTranslate}\n\n改善指示: ${instruction}` : textToTranslate,
+            targetLang: thread.lang === 'auto' ? 'en' : thread.lang,
             sourceLang: 'ja',
-            tone: tone || msg.tone || thread.tone || 'auto',
-            context: this._getContextMessages(msg.threadId),
+            tone: tone || message.tone || thread.tone || 'auto',
+            context: this._getContextMessages(message.threadId),
             dictionary,
             direction: 'send',
         });
 
-        // 既存メッセージを上書き更新
-        const updated = Storage.updateMessage(messageId, {
-            originalText: textToTranslate,
+        return Storage.updateMessage(messageId, {
+            japaneseText: textToTranslate,
+            partnerText: result.translatedText,
             translatedText: result.translatedText,
-            tone: tone || msg.tone || thread.tone || 'auto',
+            messageType: message.status === 'draft' ? 'draft' : 'reply',
         });
-
-        return updated;
     },
 
-    /**
-     * コンテキスト用メッセージ（直近10件）を取得
-     */
     _getContextMessages(threadId) {
-        const messages = Storage.getMessages(threadId).slice(-10);
-        return messages.map(m =>
-            `[${m.direction === 'received' ? '受信' : '送信'}] ${m.originalText.slice(0, 200)}`
-        );
+        return Storage.getMessages(threadId)
+            .slice(-10)
+            .map((message) => `[${message.direction === 'received' ? '受信' : '送信'}] ${message.originalText.slice(0, 200)}`);
     },
 
-    /**
-     * スレッドの言語を変更する
-     */
-    updateThreadLang(threadId, lang) {
-        const thread = Storage.getThreads().find(t => t.id === threadId);
-        if (thread) {
-            Storage.saveThread({ ...thread, lang });
-        }
+    async updateThreadLang(threadId, lang) {
+        await Storage.saveProjectPreference(threadId, { lang });
     },
 
-    /**
-     * スレッドのトーンを変更する
-     */
-    updateThreadTone(threadId, tone) {
-        const thread = Storage.getThreads().find(t => t.id === threadId);
-        if (thread) {
-            Storage.saveThread({ ...thread, tone });
-        }
+    async updateThreadTone(threadId, tone) {
+        await Storage.saveProjectPreference(threadId, { tone });
     },
 };

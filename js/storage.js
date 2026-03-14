@@ -1,274 +1,436 @@
 /**
- * storage.js - ローカルストレージ管理とデモデータ
+ * storage.js - API キャッシュ層
  * MultiTranslate
  */
 
-const STORAGE_KEYS = {
-  COMPANIES: 'mt_companies',
-  THREADS: 'mt_threads',
-  MESSAGES: 'mt_messages',
-  SETTINGS: 'mt_settings',
-  DICT_COMPANY: 'mt_dict_company',
-  DICT_THREADS: 'mt_dict_threads',
-  SIGNATURES: 'mt_signatures',
-};
-
-// ===== デモデータ =====
-const DEMO_DATA = {
-  companies: [
-    {
-      id: 'c1',
-      name: 'ABC Corporation',
-      lang: 'en',
-      createdAt: '2024-01-10T09:00:00Z',
-      color: '#6C63FF',
-    },
-    {
-      id: 'c2',
-      name: '韓国貿易商事（Seoul Trading）',
-      lang: 'ko',
-      createdAt: '2024-01-15T09:00:00Z',
-      color: '#00B894',
-    },
-    {
-      id: 'c3',
-      name: 'ShanghaiTech Co., Ltd.',
-      lang: 'zh',
-      createdAt: '2024-02-01T09:00:00Z',
-      color: '#E17055',
-    },
-  ],
-  threads: [
-    { id: 't1', companyId: 'c1', name: '資材調達2024', lang: 'en', tone: 'standard', signatureId: 'sig1', createdAt: '2024-01-10T09:00:00Z' },
-    { id: 't2', companyId: 'c1', name: '品質クレーム対応', lang: 'en', tone: 'formal', signatureId: 'sig1', createdAt: '2024-02-10T09:00:00Z' },
-    { id: 't3', companyId: 'c2', name: '価格交渉_春季', lang: 'ko', tone: 'standard', signatureId: 'sig1', createdAt: '2024-01-15T09:00:00Z' },
-    { id: 't4', companyId: 'c3', name: '部品サンプル依頼', lang: 'zh', tone: 'standard', signatureId: 'sig1', createdAt: '2024-02-01T09:00:00Z' },
-  ],
-  messages: [
-    {
-      id: 'm1', threadId: 't1', direction: 'received',
-      channel: 'mail', subject: 'Inquiry about shelf rack',
-      originalText: 'Dear Takeshi,\n\nI hope this email finds you well. We are interested in your medium-duty shelf racks. Could you please provide us with your latest price list and minimum order quantity?\n\nBest regards,\nJohn Smith\nABC Corporation',
-      translatedText: '田中様\n\nお世話になっております。御社の中量棚に関心があります。最新の価格リストと最低発注数量をお知らせいただけますでしょうか。\n\nよろしくお願い申し上げます。\nジョン・スミス\nABC Corporation',
-      detectedLang: 'en',
-      status: 'received',
-      createdAt: '2024-01-10T10:00:00Z',
-    },
-    {
-      id: 'm2', threadId: 't1', direction: 'sent',
-      channel: 'mail', subject: null,
-      originalText: 'ジョン様\n\nお問い合わせいただきありがとうございます。中量棚の価格リストを添付にてお送りします。最低発注数量は10本単位となっております。何かご不明な点がございましたらお知らせください。',
-      translatedText: 'Dear John,\n\nThank you for your inquiry. Please find our price list for medium-duty shelf racks attached. The minimum order quantity is 10 pieces per unit. Please do not hesitate to contact us if you have any questions.\n\nBest regards,\nTakeshi Tanaka',
-      detectedLang: 'en',
-      status: 'sent',
-      createdAt: '2024-01-10T14:30:00Z',
-    },
-    {
-      id: 'm3', threadId: 't1', direction: 'received',
-      channel: 'mail', subject: null,
-      originalText: 'Dear Takeshi,\n\nThank you for the price list. We would like to order 50 pieces of the medium-duty rack (Model M-300). Could you confirm the delivery date to our warehouse in Los Angeles?\n\nBest regards,\nJohn',
-      translatedText: '田中様\n\n価格リストをありがとうございます。中量棚（型番M-300）を50本注文したいと考えています。ロサンゼルスの倉庫への納期を確認していただけますでしょうか。\n\nよろしくお願いします。\nジョン',
-      detectedLang: 'en',
-      status: 'received',
-      createdAt: '2024-01-11T08:00:00Z',
-    },
-    {
-      id: 'm4', threadId: 't3', direction: 'received',
-      channel: 'chat',
-      originalText: '안녕하세요. 이번 봄 시즌 가격에 대해 논의하고 싶습니다. 작년보다 10% 정도 할인이 가능한지 확인 부탁드립니다.',
-      translatedText: 'こんにちは。今春シーズンの価格について議論したいと思います。昨年より約10%の値引きが可能かどうか確認をお願いします。',
-      detectedLang: 'ko',
-      status: 'received',
-      createdAt: '2024-01-15T10:30:00Z',
-    },
-  ],
-  signatures: [
-    {
-      id: 'sig1',
-      name: '標準（日本語）',
-      body: '田中 武\n株式会社サンプル\n営業部\nTEL: 03-XXXX-XXXX\nEmail: tanaka@example.co.jp',
-    },
-    {
-      id: 'sig2',
-      name: 'English',
-      body: 'Takeshi Tanaka\nSales Department\nSample Co., Ltd.\nTEL: +81-3-XXXX-XXXX\nEmail: tanaka@example.co.jp',
-    },
-  ],
-  dictCompany: [
-    { id: 'd1', ja: '中量棚', translated: 'medium duty rack' },
-    { id: 'd2', ja: '軽量棚', translated: 'light duty rack' },
-    { id: 'd3', ja: 'タイガーラック', translated: 'TIGER RACK' },
-    { id: 'd4', ja: '納期', translated: 'delivery date' },
-  ],
-  settings: {
-    aiProvider: 'mock',
-    openaiKey: '',
-    geminiKey: '',
-    claudeKey: '',
-    userName: '田中 武',
-    defaultTone: 'auto',
-  },
-};
-
-// ===== ストレージAPI =====
 const Storage = {
-  // 初期化（デモデータ投入）
-  init() {
-    if (!localStorage.getItem(STORAGE_KEYS.COMPANIES)) {
-      localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(DEMO_DATA.companies));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.THREADS)) {
-      localStorage.setItem(STORAGE_KEYS.THREADS, JSON.stringify(DEMO_DATA.threads));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.MESSAGES)) {
-      localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(DEMO_DATA.messages));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.SIGNATURES)) {
-      localStorage.setItem(STORAGE_KEYS.SIGNATURES, JSON.stringify(DEMO_DATA.signatures));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.DICT_COMPANY)) {
-      localStorage.setItem(STORAGE_KEYS.DICT_COMPANY, JSON.stringify(DEMO_DATA.dictCompany));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.DICT_THREADS)) {
-      localStorage.setItem(STORAGE_KEYS.DICT_THREADS, JSON.stringify({}));
-    }
-    if (!localStorage.getItem(STORAGE_KEYS.SETTINGS)) {
-      localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(DEMO_DATA.settings));
-    }
+  _cache: {
+    companies: [],
+    threads: [],
+    messagesByThread: {},
+    attachmentsByMessage: {},
+    signatures: [],
+    settings: {
+      aiProvider: 'mock',
+      openaiKey: '',
+      geminiKey: '',
+      claudeKey: '',
+      userName: '',
+      defaultTone: 'auto',
+      projectPreferences: {},
+    },
+    systemDictionary: [],
+    companyDictionaryByCompany: {},
+    currentUser: null,
   },
 
-  // リセット（デモデータに戻す）
-  reset() {
-    Object.values(STORAGE_KEYS).forEach(k => localStorage.removeItem(k));
-    this.init();
+  async init() {
+    await this.refreshBootstrapData();
   },
 
-  // --- 会社 ---
+  async refreshBootstrapData() {
+    const [{ user }, { settings }, companies, threads, signatures] = await Promise.all([
+      ApiClient.me(),
+      ApiClient.getSettings(),
+      ApiClient.listCompanies(),
+      ApiClient.listProjects(),
+      ApiClient.listSignatures(),
+    ]);
+
+    this._cache.currentUser = user;
+    this._cache.settings = {
+      ...this._cache.settings,
+      ...settings,
+      projectPreferences: settings.projectPreferences || {},
+    };
+    this._cache.companies = companies.map((company) => this._mapCompany(company));
+    this._cache.threads = threads.map((thread) => this._mapThread(thread));
+    this._cache.signatures = signatures.map((signature) => this._mapSignature(signature));
+  },
+
+  async reset() {
+    this._cache.messagesByThread = {};
+    this._cache.attachmentsByMessage = {};
+    this._cache.companyDictionaryByCompany = {};
+    await this.refreshBootstrapData();
+  },
+
+  getCurrentUser() {
+    return this._cache.currentUser;
+  },
+
   getCompanies() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.COMPANIES) || '[]');
-  },
-  saveCompany(company) {
-    const list = this.getCompanies();
-    const idx = list.findIndex(c => c.id === company.id);
-    if (idx >= 0) list[idx] = company;
-    else list.push(company);
-    localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(list));
-  },
-  deleteCompany(id) {
-    const list = this.getCompanies().filter(c => c.id !== id);
-    localStorage.setItem(STORAGE_KEYS.COMPANIES, JSON.stringify(list));
+    return [...this._cache.companies];
   },
 
-  // --- スレッド ---
+  async saveCompany(company) {
+    const response = company.id
+      ? await ApiClient.updateCompany(company.id, { name: company.name })
+      : await ApiClient.createCompany({ name: company.name });
+
+    const mapped = this._mapCompany(response.company);
+    const index = this._cache.companies.findIndex((item) => item.id === mapped.id);
+    if (index >= 0) this._cache.companies[index] = mapped;
+    else this._cache.companies.push(mapped);
+
+    this._cache.companies.sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    return { company: mapped, warnings: response.warnings || [] };
+  },
+
   getThreads(companyId = null) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.THREADS) || '[]');
-    return companyId ? all.filter(t => t.companyId === companyId) : all;
-  },
-  saveThread(thread) {
-    const list = this.getThreads();
-    const idx = list.findIndex(t => t.id === thread.id);
-    if (idx >= 0) list[idx] = thread;
-    else list.push(thread);
-    localStorage.setItem(STORAGE_KEYS.THREADS, JSON.stringify(list));
-  },
-  deleteThread(id) {
-    const list = this.getThreads().filter(t => t.id !== id);
-    localStorage.setItem(STORAGE_KEYS.THREADS, JSON.stringify(list));
+    const threads = [...this._cache.threads];
+    return companyId ? threads.filter((thread) => thread.companyId === companyId) : threads;
   },
 
-  // --- メッセージ ---
-  getMessages(threadId) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || '[]');
-    return all.filter(m => m.threadId === threadId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+  getThreadById(threadId) {
+    return this._cache.threads.find((thread) => thread.id === threadId) || null;
   },
-  saveMessage(message) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || '[]');
-    const idx = all.findIndex(m => m.id === message.id);
-    if (idx >= 0) all[idx] = message;
-    else all.push(message);
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(all));
-  },
-  deleteMessage(id) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || '[]').filter(m => m.id !== id);
-    localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(all));
-  },
-  updateMessage(id, patch) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.MESSAGES) || '[]');
-    const idx = all.findIndex(m => m.id === id);
-    if (idx >= 0) {
-      all[idx] = { ...all[idx], ...patch };
-      localStorage.setItem(STORAGE_KEYS.MESSAGES, JSON.stringify(all));
-      return all[idx];
+
+  async saveThread(thread) {
+    const payload = {
+      companyId: thread.companyId,
+      name: thread.name,
+    };
+
+    const response = thread.id
+      ? await ApiClient.updateProject(thread.id, payload)
+      : await ApiClient.createProject(payload);
+
+    const mapped = this._mapThread(response.project);
+    const index = this._cache.threads.findIndex((item) => item.id === mapped.id);
+    if (index >= 0) {
+      this._cache.threads[index] = { ...this._cache.threads[index], ...mapped };
+    } else {
+      this._cache.threads.push(mapped);
     }
-    return null;
+
+    return { thread: this.getThreadById(mapped.id), warnings: response.warnings || [] };
   },
 
-  // --- 署名 ---
+  async loadMessages(threadId) {
+    const messages = await ApiClient.listMessages(threadId);
+    await Promise.all(
+      messages.map(async (message) => {
+        this._cache.attachmentsByMessage[message.id] = await ApiClient.listAttachments(message.id);
+      })
+    );
+    this._cache.messagesByThread[threadId] = messages.map((message) => this._mapMessage(message));
+    return this.getMessages(threadId);
+  },
+
+  getMessages(threadId) {
+    return [...(this._cache.messagesByThread[threadId] || [])].sort((a, b) =>
+      a.createdAt.localeCompare(b.createdAt)
+    );
+  },
+
+  async saveReceivedMessage(payload) {
+    const response = await ApiClient.createReceivedMessage(payload);
+    const message = this._mapMessage(response.message);
+    this._upsertMessage(message.threadId, message);
+    return message;
+  },
+
+  async saveReplyMessage(payload) {
+    const response = await ApiClient.createReplyMessage(payload);
+    const message = this._mapMessage(response.message);
+    this._upsertMessage(message.threadId, message);
+    return message;
+  },
+
+  async updateMessage(id, patch) {
+    const response = await ApiClient.updateMessage(id, patch);
+    const message = this._mapMessage(response.message);
+    this._upsertMessage(message.threadId, message);
+    return message;
+  },
+
+  async deleteMessage(id) {
+    await ApiClient.deleteMessage(id);
+    Object.keys(this._cache.messagesByThread).forEach((threadId) => {
+      this._cache.messagesByThread[threadId] = (this._cache.messagesByThread[threadId] || []).filter(
+        (message) => message.id !== id
+      );
+    });
+  },
+
+  async moveMessage(id, projectId) {
+    const response = await ApiClient.moveMessage(id, projectId);
+    const movedMessage = this._mapMessage(response.message);
+    Object.keys(this._cache.messagesByThread).forEach((threadId) => {
+      this._cache.messagesByThread[threadId] = (this._cache.messagesByThread[threadId] || []).filter(
+        (message) => message.id !== id
+      );
+    });
+    this._upsertMessage(movedMessage.threadId, movedMessage);
+    return movedMessage;
+  },
+
+  async loadAttachments(messageId) {
+    const attachments = await ApiClient.listAttachments(messageId);
+    this._cache.attachmentsByMessage[messageId] = attachments;
+    return this.getAttachments(messageId);
+  },
+
+  getAttachments(messageId) {
+    return [...(this._cache.attachmentsByMessage[messageId] || [])];
+  },
+
+  async uploadAttachment(messageId, payload) {
+    const response = await ApiClient.uploadAttachment(messageId, payload);
+    const attachments = this._cache.attachmentsByMessage[messageId] || [];
+    attachments.push(response.attachment);
+    this._cache.attachmentsByMessage[messageId] = attachments;
+    return response.attachment;
+  },
+
+  async deleteAttachment(attachmentId, messageId) {
+    await ApiClient.deleteAttachment(attachmentId);
+    this._cache.attachmentsByMessage[messageId] = (this._cache.attachmentsByMessage[messageId] || []).filter(
+      (attachment) => attachment.id !== attachmentId
+    );
+  },
+
   getSignatures() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.SIGNATURES) || '[]');
-  },
-  saveSignature(sig) {
-    const list = this.getSignatures();
-    const idx = list.findIndex(s => s.id === sig.id);
-    if (idx >= 0) list[idx] = sig;
-    else list.push(sig);
-    localStorage.setItem(STORAGE_KEYS.SIGNATURES, JSON.stringify(list));
-  },
-  deleteSignature(id) {
-    const list = this.getSignatures().filter(s => s.id !== id);
-    localStorage.setItem(STORAGE_KEYS.SIGNATURES, JSON.stringify(list));
+    return [...this._cache.signatures];
   },
 
-  // --- 翻訳辞書（会社共通） ---
-  getDictCompany() {
-    return JSON.parse(localStorage.getItem(STORAGE_KEYS.DICT_COMPANY) || '[]');
-  },
-  saveDictCompany(list) {
-    localStorage.setItem(STORAGE_KEYS.DICT_COMPANY, JSON.stringify(list));
-  },
-  addDictCompanyEntry(entry) {
-    const list = this.getDictCompany();
-    list.push(entry);
-    this.saveDictCompany(list);
-  },
-  removeDictCompanyEntry(id) {
-    const list = this.getDictCompany().filter(e => e.id !== id);
-    this.saveDictCompany(list);
+  async reloadSignatures() {
+    const signatures = await ApiClient.listSignatures();
+    this._cache.signatures = signatures.map((signature) => this._mapSignature(signature));
+    return this.getSignatures();
   },
 
-  // --- 翻訳辞書（スレッド別） ---
-  getDictThread(threadId) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.DICT_THREADS) || '{}');
-    return all[threadId] || [];
-  },
-  saveDictThread(threadId, list) {
-    const all = JSON.parse(localStorage.getItem(STORAGE_KEYS.DICT_THREADS) || '{}');
-    all[threadId] = list;
-    localStorage.setItem(STORAGE_KEYS.DICT_THREADS, JSON.stringify(all));
-  },
-  addDictThreadEntry(threadId, entry) {
-    const list = this.getDictThread(threadId);
-    list.push(entry);
-    this.saveDictThread(threadId, list);
-  },
-  removeDictThreadEntry(threadId, id) {
-    const list = this.getDictThread(threadId).filter(e => e.id !== id);
-    this.saveDictThread(threadId, list);
+  async saveSignature(signature) {
+    const payload = {
+      name: signature.name,
+      japaneseText: signature.japaneseText || signature.body || '',
+      partnerText: signature.partnerText || null,
+      isDefault: signature.isDefault === true,
+    };
+
+    const response = signature.id
+      ? await ApiClient.updateSignature(signature.id, payload)
+      : await ApiClient.createSignature(payload);
+
+    const mapped = this._mapSignature(response.signature);
+    const index = this._cache.signatures.findIndex((item) => item.id === mapped.id);
+    if (index >= 0) this._cache.signatures[index] = mapped;
+    else this._cache.signatures.push(mapped);
+    return mapped;
   },
 
-  // --- 設定 ---
+  async deleteSignature(id) {
+    await ApiClient.deleteSignature(id);
+    this._cache.signatures = this._cache.signatures.filter((signature) => signature.id !== id);
+  },
+
+  async loadSystemDictionary() {
+    const entries = await ApiClient.listSystemDictionary();
+    this._cache.systemDictionary = entries.map((entry) => this._mapDictionaryEntry(entry));
+    return this.getSystemDictionary();
+  },
+
+  getSystemDictionary() {
+    return [...this._cache.systemDictionary];
+  },
+
+  async addSystemDictionaryEntry(entry) {
+    const response = await ApiClient.createSystemDictionaryEntry({
+      sourceTerm: entry.ja,
+      targetTerm: entry.translated,
+      languagePair: entry.languagePair || 'ja<>en',
+    });
+    const mapped = this._mapDictionaryEntry(response.entry);
+    this._cache.systemDictionary.unshift(mapped);
+    return mapped;
+  },
+
+  async removeSystemDictionaryEntry(id) {
+    await ApiClient.deleteSystemDictionaryEntry(id);
+    this._cache.systemDictionary = this._cache.systemDictionary.filter((entry) => entry.id !== id);
+  },
+
+  async loadCompanyDictionary(companyId) {
+    if (!companyId) return [];
+    const entries = await ApiClient.listCompanyDictionary(companyId);
+    this._cache.companyDictionaryByCompany[companyId] = entries.map((entry) => this._mapDictionaryEntry(entry));
+    return this.getCompanyDictionary(companyId);
+  },
+
+  getCompanyDictionary(companyId) {
+    return [...(this._cache.companyDictionaryByCompany[companyId] || [])];
+  },
+
+  async addCompanyDictionaryEntry(companyId, entry) {
+    const response = await ApiClient.createCompanyDictionaryEntry(companyId, {
+      sourceTerm: entry.ja,
+      targetTerm: entry.translated,
+      languagePair: entry.languagePair || 'ja<>en',
+    });
+    const mapped = this._mapDictionaryEntry(response.entry);
+    const entries = this._cache.companyDictionaryByCompany[companyId] || [];
+    entries.unshift(mapped);
+    this._cache.companyDictionaryByCompany[companyId] = entries;
+    return mapped;
+  },
+
+  async removeCompanyDictionaryEntry(companyId, id) {
+    await ApiClient.deleteCompanyDictionaryEntry(companyId, id);
+    this._cache.companyDictionaryByCompany[companyId] = (
+      this._cache.companyDictionaryByCompany[companyId] || []
+    ).filter((entry) => entry.id !== id);
+  },
+
   getSettings() {
-    return { ...DEMO_DATA.settings, ...JSON.parse(localStorage.getItem(STORAGE_KEYS.SETTINGS) || '{}') };
+    return { ...this._cache.settings };
   },
-  saveSettings(settings) {
-    localStorage.setItem(STORAGE_KEYS.SETTINGS, JSON.stringify(settings));
+
+  async saveSettings(settings) {
+    const response = await ApiClient.updateSettings(settings);
+    this._cache.settings = {
+      ...this._cache.settings,
+      ...response.settings,
+      projectPreferences: response.settings.projectPreferences || {},
+    };
+    return this.getSettings();
+  },
+
+  getProjectPreference(threadId) {
+    const preferences = this._cache.settings.projectPreferences || {};
+    return preferences[threadId] || {};
+  },
+
+  async saveProjectPreference(threadId, patch) {
+    const projectPreferences = {
+      ...(this._cache.settings.projectPreferences || {}),
+      [threadId]: {
+        ...this.getProjectPreference(threadId),
+        ...patch,
+      },
+    };
+    await this.saveSettings({ projectPreferences });
+    const index = this._cache.threads.findIndex((thread) => thread.id === threadId);
+    if (index >= 0) {
+      this._cache.threads[index] = this._applyProjectPreference(this._cache.threads[index]);
+    }
+    return this.getProjectPreference(threadId);
+  },
+
+  async searchSidebar(keyword) {
+    if (!keyword) {
+      return {
+        companies: this.getCompanies(),
+        threads: this.getThreads(),
+      };
+    }
+
+    const [companies, projects] = await Promise.all([
+      ApiClient.searchCompanies(keyword),
+      ApiClient.searchProjects(keyword),
+    ]);
+
+    return {
+      companies: companies.map((company) => this._mapCompany(company)),
+      threads: projects.map((project) => this._mapThread(project)),
+    };
+  },
+
+  _mapCompany(company) {
+    return {
+      id: company.id,
+      name: company.name,
+      lang: 'auto',
+      color: this._colorFromId(company.id),
+      createdAt: company.createdAt,
+      updatedAt: company.updatedAt,
+    };
+  },
+
+  _mapThread(project) {
+    return this._applyProjectPreference({
+      id: project.id,
+      companyId: project.companyId,
+      name: project.name,
+      lang: 'auto',
+      tone: 'auto',
+      signatureId: null,
+      createdAt: project.createdAt,
+      isUnclassified: project.isUnclassified,
+    });
+  },
+
+  _applyProjectPreference(thread) {
+    const preference = this.getProjectPreference(thread.id);
+    return {
+      ...thread,
+      lang: preference.lang || thread.lang || 'auto',
+      tone: preference.tone || thread.tone || 'auto',
+      signatureId: preference.signatureId || thread.signatureId || null,
+    };
+  },
+
+  _mapMessage(message) {
+    return {
+      id: message.id,
+      threadId: message.projectId,
+      direction: message.messageType === 'received' ? 'received' : 'sent',
+      channel: message.channelType === 'email' ? 'mail' : 'chat',
+      subject: message.subject,
+      originalText:
+        message.messageType === 'received'
+          ? message.sourceText || ''
+          : message.japaneseText || message.sourceText || '',
+      translatedText:
+        message.messageType === 'received'
+          ? message.translatedText || message.japaneseText || ''
+          : message.partnerText || message.translatedText || '',
+      detectedLang: message.sourceLanguage || 'auto',
+      tone: this.getProjectPreference(message.projectId).tone || 'auto',
+      status: message.messageType === 'draft' ? 'draft' : message.messageType === 'reply' ? 'sent' : 'received',
+      createdAt: message.sourceSentAt || message.createdAt,
+      attachments: this.getAttachments(message.id),
+      raw: message,
+    };
+  },
+
+  _mapSignature(signature) {
+    return {
+      id: signature.id,
+      name: signature.name,
+      body: [signature.japaneseText, signature.partnerText].filter(Boolean).join('\n\n'),
+      japaneseText: signature.japaneseText,
+      partnerText: signature.partnerText,
+      isDefault: signature.isDefault,
+    };
+  },
+
+  _mapDictionaryEntry(entry) {
+    return {
+      id: entry.id,
+      ja: entry.sourceTerm,
+      translated: entry.targetTerm,
+      languagePair: entry.languagePair,
+      raw: entry,
+    };
+  },
+
+  _upsertMessage(threadId, message) {
+    const messages = this._cache.messagesByThread[threadId] || [];
+    const index = messages.findIndex((item) => item.id === message.id);
+    if (index >= 0) messages[index] = message;
+    else messages.push(message);
+    this._cache.messagesByThread[threadId] = messages;
+  },
+
+  _colorFromId(id) {
+    const palette = ['#6C63FF', '#00B894', '#E17055', '#0984E3', '#A29BFE', '#FD79A8', '#FDCB6E', '#55EFC4'];
+    const seed = String(id)
+      .split('')
+      .reduce((sum, char) => sum + char.charCodeAt(0), 0);
+    return palette[seed % palette.length];
   },
 };
-
-// ===== ユーティリティ =====
-function generateId(prefix = 'id') {
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
-}
 
 function formatTime(isoString) {
   const d = new Date(isoString);
@@ -276,17 +438,27 @@ function formatTime(isoString) {
 }
 
 function getCompanyInitial(name) {
-  // アルファベットなら先頭2文字、日本語なら先頭1文字
-  const match = name.match(/[A-Za-z]{2}/);
+  const match = String(name || '').match(/[A-Za-z]{2}/);
   if (match) return match[0].toUpperCase();
-  return name[0] || '?';
+  return String(name || '?')[0] || '?';
 }
 
 function getLangLabel(code) {
   const map = {
-    auto: '自動', en: '英語', zh: '中国語(簡)', 'zh-TW': '中国語(繁)',
-    ko: '韓国語', es: 'スペイン語', fr: 'フランス語', de: 'ドイツ語',
-    it: 'イタリア語', pt: 'ポルトガル語', ar: 'アラビア語', th: 'タイ語', vi: 'ベトナム語',
+    auto: '自動',
+    en: '英語',
+    zh: '中国語(簡)',
+    'zh-TW': '中国語(繁)',
+    ko: '韓国語',
+    es: 'スペイン語',
+    fr: 'フランス語',
+    de: 'ドイツ語',
+    it: 'イタリア語',
+    pt: 'ポルトガル語',
+    ar: 'アラビア語',
+    th: 'タイ語',
+    vi: 'ベトナム語',
+    ja: '日本語',
   };
   return map[code] || code;
 }

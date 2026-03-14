@@ -11,7 +11,7 @@ const Toast = {
         const icons = { success: '✓', error: '✕', info: 'ℹ' };
         const toast = document.createElement('div');
         toast.className = `toast ${type}`;
-        toast.innerHTML = `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span>${message}</span>`;
+        Dom.setMarkup(toast, `<span class="toast-icon">${icons[type] || 'ℹ'}</span><span>${message}</span>`);
         container.appendChild(toast);
 
         setTimeout(() => {
@@ -25,19 +25,25 @@ const Toast = {
 };
 
 const App = {
-    init() {
-        // ストレージ初期化
-        Storage.init();
+    async init() {
+        this._bindLoginEvents();
+        this._appendMobileOverlay();
 
-        // 各モジュール初期化
+        try {
+            await Storage.init();
+            await this._startAuthenticatedApp();
+        } catch (_error) {
+            this._showLogin();
+        }
+    },
+
+    async _startAuthenticatedApp() {
+        this._hideLogin();
+
         Settings.init();
         Sidebar.init();
         Modals.init();
 
-        // モバイルオーバーレイ追加
-        this._appendMobileOverlay();
-
-        // イベント登録
         this._bindHeaderEvents();
         this._bindFooterEvents();
         this._bindReceiveEvents();
@@ -45,12 +51,49 @@ const App = {
         this._bindBackButton();
         this._bindKeyboardShortcuts();
 
-        // デモ：最初のスレッドを自動選択
+        await Storage.loadSystemDictionary();
+
         const threads = Storage.getThreads();
         if (threads.length > 0) {
             const firstThread = threads[0];
-            Sidebar.selectThread(firstThread.id, firstThread.companyId);
+            await Sidebar.selectThread(firstThread.id, firstThread.companyId);
         }
+    },
+
+    _bindLoginEvents() {
+        document.getElementById('btn-login')?.addEventListener('click', () => this.handleLogin());
+        document.getElementById('login-password')?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                this.handleLogin();
+            }
+        });
+    },
+
+    async handleLogin() {
+        const email = document.getElementById('login-email')?.value?.trim();
+        const password = document.getElementById('login-password')?.value || '';
+        if (!email || !password) {
+            Toast.show('メールアドレスとパスワードを入力してください', 'error');
+            return;
+        }
+
+        try {
+            await ApiClient.login(email, password);
+            await Storage.reset();
+            await this._startAuthenticatedApp();
+            Toast.show('ログインしました', 'success');
+        } catch (error) {
+            Toast.show(`ログインエラー: ${error.message}`, 'error');
+        }
+    },
+
+    _showLogin() {
+        document.getElementById('login-overlay')?.classList.remove('hidden');
+    },
+
+    _hideLogin() {
+        document.getElementById('login-overlay')?.classList.add('hidden');
     },
 
     // ===== ヘッダーイベント =====
@@ -111,7 +154,12 @@ const App = {
 
         // 添付ボタン（将来拡張用・現時点はトースト）
         document.getElementById('btn-attach')?.addEventListener('click', () => {
-            Toast.show('添付ファイル機能は将来実装予定です', 'info');
+            document.getElementById('attach-input')?.click();
+        });
+        document.getElementById('attach-input')?.addEventListener('change', (event) => {
+            Chat.handleAttachFiles(event.target.files).finally(() => {
+                event.target.value = '';
+            });
         });
 
         // Enterキーで送信（Shift+Enterで改行）
@@ -225,5 +273,8 @@ const App = {
 
 // ===== DOMContentLoaded で起動 =====
 document.addEventListener('DOMContentLoaded', () => {
-    App.init();
+    App.init().catch((error) => {
+        console.error(error);
+        Toast.show(`初期化エラー: ${error.message}`, 'error');
+    });
 });

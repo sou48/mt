@@ -51,11 +51,20 @@ npm run dev
 - **フロントエンド**: HTML / CSS / JavaScript（バニラ）
 - **Webサーバー**: Nginx (Docker)
 - **AIプロバイダー**: OpenAI / Google Gemini / Anthropic Claude（API連携）
-- **データ保存**: localStorage（ブラウザ）
+- **データ保存**: PostgreSQL / セッション設定 API
+- **添付保存**: `local://` 抽象化経由のローカル保存、将来 S3 互換ストレージへ移行可能
 
 ## バックエンド設計ドキュメント
 
 - [バックエンド仕様](/home/takeshi/multi-translate/docs/バックエンド仕様.md)
+- [API_JSON仕様](/home/takeshi/multi-translate/docs/API_JSON仕様.md)
+- [API仕様管理方針](/home/takeshi/multi-translate/docs/API仕様管理方針.md)
+- [管理者画面_UI要件](/home/takeshi/multi-translate/docs/管理者画面_UI要件.md)
+- [監査ログ方針](/home/takeshi/multi-translate/docs/監査ログ方針.md)
+- [バックアップ運用設計](/home/takeshi/multi-translate/docs/バックアップ運用設計.md)
+- [S3互換ストレージ移行方針](/home/takeshi/multi-translate/docs/S3互換ストレージ移行方針.md)
+- [ログ監視と障害時確認手順](/home/takeshi/multi-translate/docs/ログ監視と障害時確認手順.md)
+- [実送信連携再評価](/home/takeshi/multi-translate/docs/実送信連携再評価.md)
 - [マイグレーション方針](/home/takeshi/multi-translate/docs/マイグレーション方針.md)
 - [テーブル定義確定案](/home/takeshi/multi-translate/docs/テーブル定義確定案.md)
 - [技術選定](/home/takeshi/multi-translate/docs/技術選定.md)
@@ -181,6 +190,7 @@ git push
 - 会社 → 案件スレッド の階層管理
 - 多言語対応（英語、韓国語、中国語など12言語）
 - AI翻訳（OpenAI GPT / Gemini / Claude 切替可能）
+- AI 返信支援の安全制御とプロンプトインジェクション対策
 - 翻訳トーン変更（ビジネス正式 / 標準 / フレンドリー）
 - 翻訳辞書機能（会社共通 + 案件別）
 - 署名テンプレート管理
@@ -196,6 +206,15 @@ npm run db:seed:admin
 
 > `db:migrate:dev` は PostgreSQL 起動後に実行します。
 
+認証 API にはパスワードリセットも含みます。開発環境の `POST /api/auth/password-reset/request` は、メール実送信の代わりに `preview.resetUrl` とトークンを返します。
+
+履歴参照 API:
+
+- `GET /api/messages/:messageId/histories`
+- `GET /api/signatures/:signatureId/histories`
+- `GET /api/dictionaries/system/:entryId/histories`
+- `GET /api/companies/:companyId/dictionaries/:entryId/histories`
+
 初期管理者の投入値は `.env` の以下で変更できます。
 
 ```bash
@@ -204,6 +223,8 @@ ADMIN_BOOTSTRAP_EMAIL=admin@example.com
 ADMIN_BOOTSTRAP_DISPLAY_NAME=初期管理者
 ADMIN_BOOTSTRAP_PASSWORD=change-me-now
 SESSION_COOKIE_SECURE=false
+APP_BASE_URL=http://localhost:3001
+PASSWORD_RESET_TOKEN_EXPIRES_MINUTES=30
 ```
 
 ## APIキー設定
