@@ -29,8 +29,8 @@ const Storage = {
   },
 
   async refreshBootstrapData() {
-    const [{ user }, { settings }, companies, threads, signatures] = await Promise.all([
-      ApiClient.me(),
+    const { user } = await ApiClient.me();
+    const [{ settings }, companies, threads, signatures] = await Promise.all([
       ApiClient.getSettings(),
       ApiClient.listCompanies(),
       ApiClient.listProjects(),
@@ -330,9 +330,19 @@ const Storage = {
       ApiClient.searchProjects(keyword),
     ]);
 
+    const mappedCompanies = companies.map((company) => this._mapCompany(company));
+    const mappedProjects = projects.map((project) => this._mapThread(project));
+    const companyIdsWithDirectMatch = new Set(mappedCompanies.map((company) => company.id));
+    const supplementedThreads = this.getThreads().filter((thread) => companyIdsWithDirectMatch.has(thread.companyId));
+    const uniqueThreads = new Map();
+
+    [...mappedProjects, ...supplementedThreads].forEach((thread) => {
+      uniqueThreads.set(thread.id, thread);
+    });
+
     return {
-      companies: companies.map((company) => this._mapCompany(company)),
-      threads: projects.map((project) => this._mapThread(project)),
+      companies: mappedCompanies,
+      threads: [...uniqueThreads.values()],
     };
   },
 

@@ -46,9 +46,15 @@ const Sidebar = {
     _renderCompanyGroup(company, threads, isOpen, filterText = '') {
         const initial = getCompanyInitial(company.name);
         const langLabel = getLangLabel(company.lang);
+        const normalizedFilter = String(filterText || '').toLowerCase();
+        const companyMatchesFilter = normalizedFilter
+            ? company.name.toLowerCase().includes(normalizedFilter)
+            : false;
 
         const filteredThreads = filterText
-            ? threads.filter(t => t.name.toLowerCase().includes(filterText.toLowerCase()))
+            ? companyMatchesFilter
+                ? threads
+                : threads.filter(t => t.name.toLowerCase().includes(normalizedFilter))
             : threads;
 
         return `
