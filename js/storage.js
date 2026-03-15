@@ -17,6 +17,7 @@ const Storage = {
       claudeKey: '',
       userName: '',
       defaultTone: 'auto',
+      themeMode: 'dark',
       projectPreferences: {},
     },
     systemDictionary: [],

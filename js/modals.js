@@ -149,6 +149,7 @@ const Modals = {
         document.getElementById('claude-api-key').value = '';
         document.getElementById('user-name').value = settings.userName || '';
         document.getElementById('default-tone').value = settings.defaultTone || 'auto';
+        document.getElementById('theme-mode').value = settings.themeMode || 'dark';
         this._renderSignatureList();
         this._show('settings-modal');
         this._updateApiKeyVisibility(settings.aiProvider || 'mock');
@@ -161,11 +162,13 @@ const Modals = {
         const claudeKey = document.getElementById('claude-api-key')?.value?.trim();
         const userName = document.getElementById('user-name')?.value?.trim();
         const defaultTone = document.getElementById('default-tone')?.value;
+        const themeMode = document.getElementById('theme-mode')?.value;
 
         const updated = {
             aiProvider: provider,
             userName: userName || '',
             defaultTone: defaultTone || 'auto',
+            themeMode: themeMode || 'dark',
         };
         if (openaiKey) updated.openaiKey = openaiKey;
         if (geminiKey) updated.geminiKey = geminiKey;
@@ -173,6 +176,7 @@ const Modals = {
 
         Storage.saveSettings(updated)
             .then(() => {
+                Settings.applyTheme(Storage.getSettings().themeMode || 'dark');
                 this._hide('settings-modal');
                 Toast.show('設定を保存しました', 'success');
             })

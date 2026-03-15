@@ -1,6 +1,7 @@
 const express = require('express');
 const {
   AiInputError,
+  AiProviderError,
   detectLanguage,
   generateDraft,
   getAiSettingsFromSession,
@@ -13,6 +14,15 @@ const router = express.Router();
 function handleAiError(res, error) {
   if (error instanceof AiInputError) {
     return res.status(400).json({ message: error.message });
+  }
+
+  if (error instanceof AiProviderError) {
+    console.error('AI provider error:', {
+      provider: error.provider,
+      status: error.status,
+      details: error.details,
+    });
+    return res.status(502).json({ message: error.message });
   }
 
   console.error('AI API error:', error);

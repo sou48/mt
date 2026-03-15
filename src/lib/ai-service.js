@@ -5,6 +5,7 @@ const DEFAULT_SETTINGS = {
   claudeKey: '',
   userName: '',
   defaultTone: 'auto',
+  themeMode: 'dark',
   projectPreferences: {},
 };
 
@@ -33,6 +34,16 @@ class AiInputError extends Error {
   constructor(message) {
     super(message);
     this.name = 'AiInputError';
+  }
+}
+
+class AiProviderError extends Error {
+  constructor(provider, status, message, details = '') {
+    super(message);
+    this.name = 'AiProviderError';
+    this.provider = provider;
+    this.status = status;
+    this.details = details;
   }
 }
 
@@ -110,6 +121,77 @@ function cleanModelOutput(text, maxLength) {
     .replace(/\n?```$/g, '')
     .trim()
     .slice(0, maxLength);
+}
+
+async function readErrorBody(response) {
+  const contentType = response.headers.get('content-type') || '';
+
+  try {
+    if (contentType.includes('application/json')) {
+      return await response.json();
+    }
+    return await response.text();
+  } catch (_error) {
+    return null;
+  }
+}
+
+function extractProviderErrorMessage(payload, fallback) {
+  if (!payload) return fallback;
+  if (typeof payload === 'string') {
+    try {
+      const parsed = JSON.parse(payload);
+      return extractProviderErrorMessage(parsed, fallback);
+    } catch (_error) {
+      return sanitizeProviderMessage(payload.trim() || fallback);
+    }
+  }
+  if (typeof payload?.error?.message === 'string') {
+    return sanitizeProviderMessage(payload.error.message.trim() || fallback);
+  }
+  if (typeof payload?.message === 'string') {
+    return sanitizeProviderMessage(payload.message.trim() || fallback);
+  }
+  return sanitizeProviderMessage(fallback);
+}
+
+function sanitizeProviderMessage(message) {
+  return String(message || '')
+    .replace(/sk-[A-Za-z0-9_-]{8,}/g, 'sk-***')
+    .replace(/AIza[0-9A-Za-z_-]{10,}/g, 'AIza***')
+    .replace(/sk-ant-[A-Za-z0-9_-]{8,}/g, 'sk-ant-***');
+}
+
+function buildProviderUserMessage(providerLabel, status, message) {
+  switch (status) {
+    case 400:
+      return `${providerLabel} へのリクエストが不正です。設定または入力内容を確認してください。詳細: ${message}`;
+    case 401:
+      return `${providerLabel} APIキーが無効です。キーの入力内容を確認してください。詳細: ${message}`;
+    case 403:
+      return `${providerLabel} の利用権限が不足しています。プロジェクト設定やモデル利用権限を確認してください。詳細: ${message}`;
+    case 404:
+      return `${providerLabel} のエンドポイントまたはモデルが利用できません。詳細: ${message}`;
+    case 429:
+      return `${providerLabel} の利用上限に達しました。課金設定またはレート制限を確認してください。詳細: ${message}`;
+    default:
+      if (status >= 500) {
+        return `${providerLabel} 側で一時的なエラーが発生しています。時間を置いて再試行してください。詳細: ${message}`;
+      }
+      return `${providerLabel} との通信に失敗しました。詳細: ${message}`;
+  }
+}
+
+async function throwProviderError(providerLabel, response, fallbackMessage) {
+  const payload = await readErrorBody(response);
+  const providerMessage = extractProviderErrorMessage(payload, fallbackMessage);
+
+  throw new AiProviderError(
+    providerLabel,
+    response.status,
+    buildProviderUserMessage(providerLabel, response.status, providerMessage),
+    providerMessage
+  );
 }
 
 function sanitizeContext(context) {
@@ -215,7 +297,7 @@ async function detectLanguageWithOpenAI(text, apiKey) {
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
+    await throwProviderError('OpenAI', response, `OpenAI API error: ${response.status}`);
   }
 
   const data = await response.json();
@@ -269,7 +351,7 @@ async function translateWithOpenAI(params, apiKey) {
   });
 
   if (!response.ok) {
-    throw new Error(`OpenAI API error: ${response.status}`);
+    await throwProviderError('OpenAI', response, `OpenAI API error: ${response.status}`);
   }
 
   const data = await response.json();
@@ -358,7 +440,7 @@ async function translateWithGemini(params, apiKey) {
   );
 
   if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status}`);
+    await throwProviderError('Gemini', response, `Gemini API error: ${response.status}`);
   }
 
   const data = await response.json();
@@ -396,7 +478,7 @@ async function draftWithGemini(params, apiKey) {
   );
 
   if (!response.ok) {
-    throw new Error(`Gemini API error: ${response.status}`);
+    await throwProviderError('Gemini', response, `Gemini API error: ${response.status}`);
   }
 
   const data = await response.json();
@@ -440,7 +522,7 @@ async function translateWithClaude(params, apiKey) {
   });
 
   if (!response.ok) {
-    throw new Error(`Claude API error: ${response.status}`);
+    await throwProviderError('Claude', response, `Claude API error: ${response.status}`);
   }
 
   const data = await response.json();
@@ -510,6 +592,7 @@ async function generateDraft(params, settings) {
 
 module.exports = {
   AiInputError,
+  AiProviderError,
   DEFAULT_SETTINGS,
   detectLanguage,
   generateDraft,

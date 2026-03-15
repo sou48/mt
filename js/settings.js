@@ -5,9 +5,14 @@
 
 const Settings = {
     init() {
-        // 設定を読み込んでUIに適用する（必要に応じて）
         const settings = Storage.getSettings();
+        this.applyTheme(settings.themeMode || 'dark');
         document.title = 'MultiTranslate - 多言語翻訳チャット';
+    },
+
+    applyTheme(themeMode = 'dark') {
+        const nextTheme = themeMode === 'light' ? 'light' : 'dark';
+        document.documentElement.dataset.theme = nextTheme;
     },
 
     getAiProvider() {
@@ -20,5 +25,9 @@ const Settings = {
 
     getUserName() {
         return Storage.getSettings().userName || 'ユーザー';
+    },
+
+    getThemeMode() {
+        return Storage.getSettings().themeMode || 'dark';
     },
 };
