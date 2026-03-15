@@ -17,7 +17,7 @@ http:
         certResolver: le
 
     oos:
-      rule: Host(`oos.trialworks.jp`) || PathPrefix(`/oos`)
+      rule: Host(`oos.trialworks.jp`)
       entryPoints:
         - web
       service: oos-service
