@@ -154,6 +154,30 @@ function compactContextLines(context) {
     .join('\n');
 }
 
+function normalizeUsage(usage) {
+  if (!usage || typeof usage !== 'object') {
+    return null;
+  }
+
+  const inputTokens = Number(
+    usage.prompt_tokens ?? usage.input_tokens ?? usage.promptTokenCount ?? usage.inputTokenCount ?? 0
+  );
+  const outputTokens = Number(
+    usage.completion_tokens ??
+      usage.output_tokens ??
+      usage.candidatesTokenCount ??
+      usage.outputTokenCount ??
+      0
+  );
+  const totalTokens = Number(usage.total_tokens ?? usage.totalTokenCount ?? inputTokens + outputTokens);
+
+  return {
+    inputTokens,
+    outputTokens,
+    totalTokens,
+  };
+}
+
 async function readErrorBody(response) {
   const contentType = response.headers.get('content-type') || '';
 
@@ -386,6 +410,7 @@ async function translateWithOpenAI(params, apiKey) {
     detectedLang: needsDetectedLang
       ? normalizePlainText(parsed?.detectedLang || detectLanguageMock(text), 20) || detectLanguageMock(text)
       : sourceLang,
+    usage: normalizeUsage(data.usage),
   };
 }
 
@@ -471,6 +496,7 @@ async function translateWithGemini(params, apiKey) {
   return {
     translatedText: cleanModelOutput(data.candidates[0].content.parts[0].text, MAX_TEXT_LENGTH),
     detectedLang: detectLanguageMock(text),
+    usage: normalizeUsage(data.usageMetadata),
   };
 }
 
@@ -549,6 +575,7 @@ async function translateWithClaude(params, apiKey) {
   return {
     translatedText: cleanModelOutput(data.content[0].text, MAX_TEXT_LENGTH),
     detectedLang: detectLanguageMock(text),
+    usage: normalizeUsage(data.usage),
   };
 }
 
@@ -585,6 +612,7 @@ async function translate(params, settings) {
         ? mockReceiveTranslation(sanitizedParams.text, detectedLang)
         : mockSendTranslation(sanitizedParams.text, sanitizedParams.targetLang),
     detectedLang,
+    usage: null,
   };
 }
 

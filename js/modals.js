@@ -396,6 +396,8 @@ const Modals = {
             ['btn-close-sig-select', 'signature-select-modal'],
             ['btn-close-tone-retranslate', 'tone-retranslate-modal'],
             ['btn-cancel-tone-retranslate', 'tone-retranslate-modal'],
+            ['btn-close-usage', 'usage-modal'],
+            ['btn-cancel-usage', 'usage-modal'],
         ];
 
         closePairs.forEach(([btnId, modalId]) => {
@@ -404,6 +406,10 @@ const Modals = {
             btn.addEventListener('click', () => {
                 if (btnId === 'btn-close-tone-retranslate' || btnId === 'btn-cancel-tone-retranslate') {
                     Chat.closeToneRetranslateModal();
+                    return;
+                }
+                if (btnId === 'btn-close-usage' || btnId === 'btn-cancel-usage') {
+                    Chat.closeUsageModal();
                     return;
                 }
                 if (modalId) this._hide(modalId);

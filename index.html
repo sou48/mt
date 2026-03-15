@@ -538,6 +538,25 @@
     </div>
   </div>
 
+  <!-- usageモーダル -->
+  <div id="usage-modal" class="modal-overlay hidden">
+    <div class="modal-container modal-sm usage-modal-container">
+      <div class="modal-header">
+        <h2 id="usage-modal-title">usage</h2>
+        <button id="btn-close-usage" class="btn-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="settings-note">この翻訳で消費したトークン数です。</p>
+        <div id="usage-modal-body"></div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-cancel-usage" class="btn-secondary">閉じる</button>
+      </div>
+    </div>
+  </div>
+
   <!-- トースト通知 -->
   <div id="toast-container" class="toast-container"></div>
 

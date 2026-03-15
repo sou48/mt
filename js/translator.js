@@ -35,6 +35,9 @@ const Translator = {
             await Storage.saveProjectPreference(threadId, { lang: result.detectedLang });
         }
 
+        Storage.setMessageUsage(message.id, result.usage);
+        message.usage = result.usage || null;
+
         return message;
     },
 
@@ -56,15 +59,18 @@ const Translator = {
             direction: 'send',
         });
 
+        this._lastUsage = result.usage || null;
+
         return {
             originalText: text,
             translatedText: result.translatedText,
             targetLang,
             tone: useTone,
+            usage: result.usage || null,
         };
     },
 
-    async sendMessage({ text, translatedText, threadId, tone, channel, subject, signatureBody }) {
+    async sendMessage({ text, translatedText, threadId, tone, channel, subject, signatureBody, usage }) {
         const thread = Storage.getThreadById(threadId);
         if (!thread) throw new Error('案件が見つかりません');
 
@@ -73,7 +79,7 @@ const Translator = {
             partnerText = `${translatedText}\n\n${signatureBody}`;
         }
 
-        return Storage.saveReplyMessage({
+        const savedMessage = await Storage.saveReplyMessage({
             projectId: threadId,
             messageType: 'reply',
             channelType: channel === 'mail' ? 'email' : 'chat',
@@ -84,6 +90,13 @@ const Translator = {
             translatedLanguage: thread.lang === 'auto' ? 'en' : thread.lang,
             languagePair: `ja<>${thread.lang === 'auto' ? 'en' : thread.lang}`,
         });
+
+        if (usage) {
+            Storage.setMessageUsage(savedMessage.id, usage);
+            savedMessage.usage = usage;
+        }
+
+        return savedMessage;
     },
 
     async retranslate({ messageId, newJaText, tone, instruction }) {
@@ -107,11 +120,17 @@ const Translator = {
             direction: 'send',
         });
 
+        this._lastUsage = result.usage || null;
+
         return Storage.updateMessage(messageId, {
             japaneseText: textToTranslate,
             partnerText: result.translatedText,
             translatedText: result.translatedText,
             messageType: message.status === 'draft' ? 'draft' : 'reply',
+        }).then((updatedMessage) => {
+            Storage.setMessageUsage(updatedMessage.id, result.usage);
+            updatedMessage.usage = result.usage || null;
+            return updatedMessage;
         });
     },
 

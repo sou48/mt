@@ -106,6 +106,9 @@ const Chat = {
             : '';
 
         const thread = Storage.getThreadById(msg.threadId);
+        const usageLink = msg.usage
+            ? `<button class="usage-link" data-action="show-usage" data-msg-id="${msg.id}">usage</button>`
+            : '';
         const actionsHtml = isReceived
             ? `<div class="msg-actions">
            <button class="msg-action-btn" data-action="copy-translation" data-msg-id="${msg.id}">
@@ -147,6 +150,7 @@ const Chat = {
         ${attachmentsHtml}
         <div class="msg-meta">
           <span>${timeStr}</span>
+          ${usageLink}
           ${statusHtml}
         </div>
       </div>
@@ -261,6 +265,7 @@ const Chat = {
                 translatedText: this.pendingTranslation.translatedText,
                 threadId: this.currentThreadId,
                 tone: this.pendingTranslation.tone,
+                usage: this.pendingTranslation.usage,
                 signatureBody: null,
             });
 
@@ -298,6 +303,9 @@ const Chat = {
                 <span style="font-weight:400; color:rgba(255,179,0,0.75);">設定からAPIキーを入力すると実際の翻訳が有効になります</span>
                </div>`
             : '';
+        const usageLink = result.usage
+            ? `<button id="btn-preview-usage" class="usage-link usage-link-preview">usage</button>`
+            : '';
 
         const preview = document.createElement('div');
         preview.id = 'send-preview';
@@ -315,6 +323,7 @@ const Chat = {
       <div style="font-size:11px; color:var(--primary-400); margin-bottom:6px; font-weight:600;">🌐 翻訳プレビュー（${getLangLabel(result.targetLang)}）</div>
       ${mockBadge}
       <div style="font-size:13.5px; color:var(--text-primary); white-space:pre-wrap; line-height:1.6;">${this._esc(result.translatedText)}</div>
+      ${usageLink}
       <div style="margin-top:10px; display:flex; gap:6px; position:sticky; bottom:0; background:var(--bg-preview-sticky); padding:4px 0;">
         <button id="btn-confirm-send" style="background:linear-gradient(135deg,#5B52F0,#6C63FF); color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">✓ この内容で送信</button>
         <button id="btn-cancel-preview" style="background:var(--bg-glass); border:1px solid var(--border-default); border-radius:8px; padding:6px 12px; font-size:12px; color:var(--text-secondary); cursor:pointer;">キャンセル</button>
@@ -328,6 +337,9 @@ const Chat = {
         document.getElementById('btn-cancel-preview')?.addEventListener('click', () => {
             this.pendingTranslation = null;
             this._hideSendPreview();
+        });
+        document.getElementById('btn-preview-usage')?.addEventListener('click', () => {
+            this.openUsageModal(result.usage, '翻訳プレビュー');
         });
     },
 
@@ -419,6 +431,40 @@ const Chat = {
         document.getElementById('tone-retranslate-modal')?.classList.add('hidden');
     },
 
+    openUsageModal(usage, title = 'usage') {
+        if (!usage) {
+            Toast.show('usage 情報がありません', 'info');
+            return;
+        }
+
+        const titleEl = document.getElementById('usage-modal-title');
+        const bodyEl = document.getElementById('usage-modal-body');
+        if (!titleEl || !bodyEl) return;
+
+        titleEl.textContent = title;
+        Dom.setMarkup(bodyEl, `
+          <div class="usage-grid">
+            <div class="usage-card">
+              <div class="usage-card-label">Input</div>
+              <div class="usage-card-value">${Number(usage.inputTokens || 0).toLocaleString('ja-JP')}</div>
+            </div>
+            <div class="usage-card">
+              <div class="usage-card-label">Output</div>
+              <div class="usage-card-value">${Number(usage.outputTokens || 0).toLocaleString('ja-JP')}</div>
+            </div>
+            <div class="usage-card usage-card-total">
+              <div class="usage-card-label">Total</div>
+              <div class="usage-card-value">${Number(usage.totalTokens || 0).toLocaleString('ja-JP')}</div>
+            </div>
+          </div>
+        `);
+        document.getElementById('usage-modal')?.classList.remove('hidden');
+    },
+
+    closeUsageModal() {
+        document.getElementById('usage-modal')?.classList.add('hidden');
+    },
+
     async confirmToneRetranslate() {
         const msgId = this.pendingRetranslateToneMessageId;
         if (!msgId) {
@@ -490,6 +536,9 @@ const Chat = {
                         break;
                     case 'reclassify-message':
                         await this.handleReclassifyMessage(msgId);
+                        break;
+                    case 'show-usage':
+                        this.openUsageModal(Storage.getMessageUsage(msgId), '翻訳 usage');
                         break;
                 }
             });

@@ -631,6 +631,24 @@ a { color: var(--primary-400); text-decoration: none; }
   font-size: 11px;
   color: var(--text-muted);
 }
+.usage-link {
+  appearance: none;
+  border: none;
+  background: transparent;
+  color: var(--primary-400);
+  font-size: 11px;
+  line-height: 1;
+  padding: 0;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.usage-link:hover {
+  color: var(--primary-500);
+}
+.usage-link-preview {
+  margin-top: 10px;
+}
 .msg-status-badge {
   display: inline-flex;
   align-items: center;
@@ -1129,6 +1147,33 @@ a { color: var(--primary-400); text-decoration: none; }
   padding: 16px 24px;
   border-top: 1px solid var(--border-default);
   flex-shrink: 0;
+}
+.usage-modal-container {
+  max-width: 360px;
+}
+.usage-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+.usage-card {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  background: var(--bg-input);
+  padding: 14px 16px;
+}
+.usage-card-total {
+  grid-column: 1 / -1;
+}
+.usage-card-label {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-bottom: 6px;
+}
+.usage-card-value {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
 }
 
 /* 設定モーダル内 */

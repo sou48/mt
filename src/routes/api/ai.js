@@ -74,6 +74,18 @@ router.post('/ai/translate', async (req, res) => {
       getAiSettingsFromSession(req)
     );
 
+    if (result?.usage) {
+      console.info('AI translate usage:', {
+        provider: getAiSettingsFromSession(req).aiProvider,
+        direction,
+        targetLang,
+        sourceLang,
+        inputTokens: result.usage.inputTokens,
+        outputTokens: result.usage.outputTokens,
+        totalTokens: result.usage.totalTokens,
+      });
+    }
+
     return res.json(result);
   } catch (error) {
     return handleAiError(res, error);

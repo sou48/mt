@@ -8,6 +8,7 @@ const Storage = {
     companies: [],
     threads: [],
     messagesByThread: {},
+    messageUsageById: {},
     attachmentsByMessage: {},
     signatures: [],
     settings: {
@@ -51,6 +52,7 @@ const Storage = {
 
   async reset() {
     this._cache.messagesByThread = {};
+    this._cache.messageUsageById = {};
     this._cache.attachmentsByMessage = {};
     this._cache.companyDictionaryByCompany = {};
     await this.refreshBootstrapData();
@@ -165,6 +167,24 @@ const Storage = {
     });
     this._upsertMessage(movedMessage.threadId, movedMessage);
     return movedMessage;
+  },
+
+  setMessageUsage(messageId, usage) {
+    if (!messageId) return;
+    if (!usage) {
+      delete this._cache.messageUsageById[messageId];
+      return;
+    }
+    this._cache.messageUsageById[messageId] = {
+      inputTokens: Number(usage.inputTokens || 0),
+      outputTokens: Number(usage.outputTokens || 0),
+      totalTokens: Number(usage.totalTokens || 0),
+    };
+  },
+
+  getMessageUsage(messageId) {
+    const usage = this._cache.messageUsageById[messageId];
+    return usage ? { ...usage } : null;
   },
 
   async loadAttachments(messageId) {
@@ -401,6 +421,7 @@ const Storage = {
       status: message.messageType === 'draft' ? 'draft' : message.messageType === 'reply' ? 'sent' : 'received',
       createdAt: message.sourceSentAt || message.createdAt,
       attachments: this.getAttachments(message.id),
+      usage: this.getMessageUsage(message.id),
       raw: message,
     };
   },
