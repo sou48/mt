@@ -35,7 +35,7 @@ npm run docker:local:build
 ./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml ps
 ```
 
-### ローカル（nginx直接）
+### ローカル（Node.js 直接起動）
 
 Node.js がインストールされていれば以下で起動可能：
 
@@ -49,9 +49,12 @@ npm run dev
 ## 技術スタック
 
 - **フロントエンド**: HTML / CSS / JavaScript（バニラ）
-- **Webサーバー**: Nginx (Docker)
+- **アプリサーバー**: Node.js / Express
+- **公開入口**: Traefik（本番）
 - **AIプロバイダー**: OpenAI / Google Gemini / Anthropic Claude（API連携）
-- **データ保存**: PostgreSQL / セッション設定 API
+- **ORM**: Prisma
+- **データ保存**: PostgreSQL
+- **セッション**: `express-session`（現状は `MemoryStore`）
 - **添付保存**: `local://` 抽象化経由のローカル保存、将来 S3 互換ストレージへ移行可能
 
 ## バックエンド設計ドキュメント
