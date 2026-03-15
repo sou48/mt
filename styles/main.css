@@ -36,6 +36,9 @@
   --bg-input: #1C2333;
   --bg-glass: rgba(255,255,255,0.04);
   --bg-glass-strong: rgba(255,255,255,0.08);
+  --bg-surface-strong: rgba(22, 27, 34, 0.95);
+  --bg-overlay: rgba(0,0,0,0.65);
+  --bg-preview-sticky: rgba(13,17,23,0.8);
 
   /* テキスト */
   --text-primary: #E6EDF3;
@@ -91,6 +94,9 @@
   --bg-input: #f8faff;
   --bg-glass: rgba(40, 52, 89, 0.04);
   --bg-glass-strong: rgba(40, 52, 89, 0.08);
+  --bg-surface-strong: rgba(248, 250, 255, 0.94);
+  --bg-overlay: rgba(100, 116, 139, 0.24);
+  --bg-preview-sticky: rgba(238, 242, 248, 0.88);
 
   --text-primary: #182033;
   --text-secondary: #52607a;
@@ -421,7 +427,7 @@ a { color: var(--primary-400); text-decoration: none; }
 
 /* チャットヘッダー */
 .chat-header {
-  background: rgba(22, 27, 34, 0.95);
+  background: var(--bg-surface-strong);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-bottom: 1px solid var(--border-default);
@@ -756,7 +762,7 @@ a { color: var(--primary-400); text-decoration: none; }
    チャットフッター（送信エリア）
    ============================================== */
 .chat-footer {
-  background: rgba(22, 27, 34, 0.95);
+  background: var(--bg-surface-strong);
   backdrop-filter: blur(12px);
   -webkit-backdrop-filter: blur(12px);
   border-top: 1px solid var(--border-default);
@@ -1074,7 +1080,7 @@ a { color: var(--primary-400); text-decoration: none; }
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(0,0,0,0.65);
+  background: var(--bg-overlay);
   backdrop-filter: blur(4px);
   -webkit-backdrop-filter: blur(4px);
   z-index: 200;

@@ -314,7 +314,7 @@ const Chat = {
       <div style="font-size:11px; color:var(--primary-400); margin-bottom:6px; font-weight:600;">🌐 翻訳プレビュー（${getLangLabel(result.targetLang)}）</div>
       ${mockBadge}
       <div style="font-size:13.5px; color:var(--text-primary); white-space:pre-wrap; line-height:1.6;">${this._esc(result.translatedText)}</div>
-      <div style="margin-top:10px; display:flex; gap:6px; position:sticky; bottom:0; background:rgba(13,17,23,0.8); padding:4px 0;">
+      <div style="margin-top:10px; display:flex; gap:6px; position:sticky; bottom:0; background:var(--bg-preview-sticky); padding:4px 0;">
         <button id="btn-confirm-send" style="background:linear-gradient(135deg,#5B52F0,#6C63FF); color:#fff; border:none; border-radius:8px; padding:6px 14px; font-size:12px; font-weight:600; cursor:pointer;">✓ この内容で送信</button>
         <button id="btn-cancel-preview" style="background:var(--bg-glass); border:1px solid var(--border-default); border-radius:8px; padding:6px 12px; font-size:12px; color:var(--text-secondary); cursor:pointer;">キャンセル</button>
       </div>

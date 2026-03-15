@@ -35,6 +35,24 @@ function validatePassword(password) {
   return typeof password === 'string' && password.length >= PASSWORD_MIN_LENGTH;
 }
 
+function finalizeLogin(req, res, user) {
+  req.session.userId = user.id.toString();
+  req.session.userRole = user.role;
+
+  req.session.save((error) => {
+    if (error) {
+      console.error('Session save failed:', error);
+      return res.status(500).json({
+        message: 'ログイン状態の保存に失敗しました。時間を置いて再度お試しください。',
+      });
+    }
+
+    return res.json({
+      user: toPublicUser(user),
+    });
+  });
+}
+
 async function ensureTestLoginUser(prisma) {
   let company = await prisma.company.findFirst({
     where: {
@@ -184,12 +202,7 @@ router.post('/login', async (req, res) => {
     });
   }
 
-  req.session.userId = user.id.toString();
-  req.session.userRole = user.role;
-
-  return res.json({
-    user: toPublicUser(user),
-  });
+  return finalizeLogin(req, res, user);
 });
 
 router.post('/test-login', async (req, res) => {
@@ -211,12 +224,7 @@ router.post('/test-login', async (req, res) => {
     });
   }
 
-  req.session.userId = user.id.toString();
-  req.session.userRole = user.role;
-
-  return res.json({
-    user: toPublicUser(user),
-  });
+  return finalizeLogin(req, res, user);
 });
 
 router.post('/logout', (req, res) => {
