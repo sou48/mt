@@ -29,14 +29,12 @@ const Translator = {
             translatedText: result.translatedText,
             translatedLanguage: 'ja',
             japaneseText: result.translatedText,
+            usage: result.usage || null,
         });
 
         if (thread.lang === 'auto' && result.detectedLang) {
             await Storage.saveProjectPreference(threadId, { lang: result.detectedLang });
         }
-
-        Storage.setMessageUsage(message.id, result.usage);
-        message.usage = result.usage || null;
 
         return message;
     },
@@ -58,8 +56,6 @@ const Translator = {
             dictionary,
             direction: 'send',
         });
-
-        this._lastUsage = result.usage || null;
 
         return {
             originalText: text,
@@ -89,12 +85,8 @@ const Translator = {
             translatedText: partnerText,
             translatedLanguage: thread.lang === 'auto' ? 'en' : thread.lang,
             languagePair: `ja<>${thread.lang === 'auto' ? 'en' : thread.lang}`,
+            usage: usage || null,
         });
-
-        if (usage) {
-            Storage.setMessageUsage(savedMessage.id, usage);
-            savedMessage.usage = usage;
-        }
 
         return savedMessage;
     },
@@ -120,17 +112,12 @@ const Translator = {
             direction: 'send',
         });
 
-        this._lastUsage = result.usage || null;
-
         return Storage.updateMessage(messageId, {
             japaneseText: textToTranslate,
             partnerText: result.translatedText,
             translatedText: result.translatedText,
             messageType: message.status === 'draft' ? 'draft' : 'reply',
-        }).then((updatedMessage) => {
-            Storage.setMessageUsage(updatedMessage.id, result.usage);
-            updatedMessage.usage = result.usage || null;
-            return updatedMessage;
+            usage: result.usage || null,
         });
     },
 

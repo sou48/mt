@@ -71,6 +71,15 @@ function toPublicMessage(message) {
     return null;
   }
 
+  const usage =
+    message.usageJson && typeof message.usageJson === 'object'
+      ? {
+          inputTokens: Number(message.usageJson.inputTokens || 0),
+          outputTokens: Number(message.usageJson.outputTokens || 0),
+          totalTokens: Number(message.usageJson.totalTokens || 0),
+        }
+      : null;
+
   return serializeBigInt({
     id: message.id,
     projectId: message.projectId,
@@ -89,6 +98,7 @@ function toPublicMessage(message) {
     japaneseText: message.japaneseText,
     partnerText: message.partnerText,
     languagePair: message.languagePair,
+    usage,
     signatureId: message.signatureId,
     signatureSnapshot: message.signatureSnapshot,
     createdAt: message.createdAt,

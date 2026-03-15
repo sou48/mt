@@ -123,6 +123,7 @@ model Message {
   japaneseText                 String?          @map("japanese_text") @db.Text
   partnerText                  String?          @map("partner_text") @db.Text
   languagePair                 String?          @map("language_pair") @db.VarChar(100)
+  usageJson                    Json?            @map("usage_json")
   signatureId                  BigInt?          @map("signature_id")
   signatureSnapshot            String?          @map("signature_snapshot") @db.Text
   project                      Project          @relation(fields: [projectId], references: [id])

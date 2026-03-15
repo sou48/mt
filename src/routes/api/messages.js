@@ -13,6 +13,26 @@ const { toPublicHistory, toPublicMessage } = require('../../utils/serialize');
 const router = express.Router();
 const REPLY_TYPES = new Set(['reply', 'draft']);
 
+function normalizeUsagePayload(rawUsage) {
+  if (!rawUsage || typeof rawUsage !== 'object') {
+    return null;
+  }
+
+  const inputTokens = Number(rawUsage.inputTokens || 0);
+  const outputTokens = Number(rawUsage.outputTokens || 0);
+  const totalTokens = Number(rawUsage.totalTokens || inputTokens + outputTokens);
+
+  if (![inputTokens, outputTokens, totalTokens].every(Number.isFinite)) {
+    return null;
+  }
+
+  return {
+    inputTokens: Math.max(0, Math.floor(inputTokens)),
+    outputTokens: Math.max(0, Math.floor(outputTokens)),
+    totalTokens: Math.max(0, Math.floor(totalTokens)),
+  };
+}
+
 async function findAccessibleProject(prisma, currentUser, rawProjectId) {
   const projectId = parseBigIntValue(rawProjectId);
   if (!projectId) {
@@ -190,6 +210,7 @@ router.post('/received', async (req, res) => {
     japaneseText = null,
     partnerText = null,
     languagePair = null,
+    usage = null,
   } = req.body || {};
 
   const projectResult = await findAccessibleProject(prisma, currentUser, projectId);
@@ -222,6 +243,7 @@ router.post('/received', async (req, res) => {
       japaneseText,
       partnerText,
       languagePair,
+      usageJson: normalizeUsagePayload(usage),
     },
   });
 
@@ -254,6 +276,7 @@ router.post('/replies', async (req, res) => {
     sourceLanguage = null,
     languagePair = null,
     signatureId = null,
+    usage = null,
   } = req.body || {};
 
   const projectResult = await findAccessibleProject(prisma, currentUser, projectId);
@@ -301,6 +324,7 @@ router.post('/replies', async (req, res) => {
       japaneseText,
       partnerText,
       languagePair,
+      usageJson: normalizeUsagePayload(usage),
       signatureId: signature?.id || null,
       signatureSnapshot,
     },
@@ -359,6 +383,10 @@ router.patch('/:messageId', async (req, res) => {
         japaneseText: req.body?.japaneseText ?? messageResult.message.japaneseText,
         partnerText: req.body?.partnerText ?? messageResult.message.partnerText,
         languagePair: req.body?.languagePair ?? messageResult.message.languagePair,
+        usageJson:
+          req.body && Object.prototype.hasOwnProperty.call(req.body, 'usage')
+            ? normalizeUsagePayload(req.body.usage)
+            : messageResult.message.usageJson,
         signatureId:
           req.body && Object.prototype.hasOwnProperty.call(req.body, 'signatureId')
             ? signature?.id || null

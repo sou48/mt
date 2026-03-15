@@ -115,6 +115,7 @@ const Storage = {
     await Promise.all(
       messages.map(async (message) => {
         this._cache.attachmentsByMessage[message.id] = await ApiClient.listAttachments(message.id);
+        this.setMessageUsage(message.id, message.usage || null);
       })
     );
     this._cache.messagesByThread[threadId] = messages.map((message) => this._mapMessage(message));
@@ -129,6 +130,7 @@ const Storage = {
 
   async saveReceivedMessage(payload) {
     const response = await ApiClient.createReceivedMessage(payload);
+    this.setMessageUsage(response.message?.id, response.message?.usage || null);
     const message = this._mapMessage(response.message);
     this._upsertMessage(message.threadId, message);
     return message;
@@ -136,6 +138,7 @@ const Storage = {
 
   async saveReplyMessage(payload) {
     const response = await ApiClient.createReplyMessage(payload);
+    this.setMessageUsage(response.message?.id, response.message?.usage || null);
     const message = this._mapMessage(response.message);
     this._upsertMessage(message.threadId, message);
     return message;
@@ -143,6 +146,7 @@ const Storage = {
 
   async updateMessage(id, patch) {
     const response = await ApiClient.updateMessage(id, patch);
+    this.setMessageUsage(response.message?.id, response.message?.usage || null);
     const message = this._mapMessage(response.message);
     this._upsertMessage(message.threadId, message);
     return message;
@@ -416,12 +420,12 @@ const Storage = {
         message.messageType === 'received'
           ? message.translatedText || message.japaneseText || ''
           : message.partnerText || message.translatedText || '',
+      usage: message.usage || this.getMessageUsage(message.id),
       detectedLang: message.sourceLanguage || 'auto',
       tone: this.getProjectPreference(message.projectId).tone || 'auto',
       status: message.messageType === 'draft' ? 'draft' : message.messageType === 'reply' ? 'sent' : 'received',
       createdAt: message.sourceSentAt || message.createdAt,
       attachments: this.getAttachments(message.id),
-      usage: this.getMessageUsage(message.id),
       raw: message,
     };
   },
