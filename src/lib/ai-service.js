@@ -5,7 +5,7 @@ const DEFAULT_SETTINGS = {
   claudeKey: '',
   userName: '',
   defaultTone: 'auto',
-  themeMode: 'dark',
+  themeMode: 'light',
   projectPreferences: {},
 };
 

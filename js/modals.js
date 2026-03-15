@@ -151,7 +151,15 @@ const Modals = {
         document.getElementById('claude-api-key').value = this._getMaskedApiKeyValue(settings.claudeKey);
         document.getElementById('user-name').value = settings.userName || '';
         document.getElementById('default-tone').value = settings.defaultTone || 'auto';
-        document.getElementById('theme-mode').value = settings.themeMode || 'dark';
+        document.getElementById('theme-mode').value = settings.themeMode || 'light';
+        document.querySelectorAll('.tab-btn').forEach((btn) => {
+            btn.classList.toggle('active', btn.dataset.tab === 'general');
+        });
+        document.querySelectorAll('#settings-modal .tab-content').forEach((content) => {
+            const isActive = content.id === 'tab-general';
+            content.classList.toggle('active', isActive);
+            content.classList.toggle('hidden', !isActive);
+        });
         this._renderSignatureList();
         this._show('settings-modal');
         this._updateApiKeyVisibility(settings.aiProvider || 'mock');
@@ -170,7 +178,7 @@ const Modals = {
             aiProvider: provider,
             userName: userName || '',
             defaultTone: defaultTone || 'auto',
-            themeMode: themeMode || 'dark',
+            themeMode: themeMode || 'light',
         };
         if (openaiKey && openaiKey !== API_KEY_MASK) updated.openaiKey = openaiKey;
         if (geminiKey && geminiKey !== API_KEY_MASK) updated.geminiKey = geminiKey;
@@ -178,7 +186,7 @@ const Modals = {
 
         Storage.saveSettings(updated)
             .then(() => {
-                Settings.applyTheme(Storage.getSettings().themeMode || 'dark');
+                Settings.applyTheme(Storage.getSettings().themeMode || 'light');
                 this._hide('settings-modal');
                 Toast.show('設定を保存しました', 'success');
             })

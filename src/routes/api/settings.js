@@ -12,7 +12,7 @@ function maskSettings(settings) {
     claudeKey: settings.claudeKey ? 'configured' : '',
     userName: settings.userName || '',
     defaultTone: settings.defaultTone || 'auto',
-    themeMode: settings.themeMode || 'dark',
+    themeMode: settings.themeMode || 'light',
     projectPreferences: settings.projectPreferences || {},
   };
 }
@@ -54,7 +54,7 @@ router.patch('/settings', async (req, res) => {
         : getAiSettingsFromSession(req).defaultTone,
     themeMode:
       req.body && Object.prototype.hasOwnProperty.call(req.body, 'themeMode')
-        ? req.body.themeMode || 'dark'
+        ? req.body.themeMode || 'light'
         : getAiSettingsFromSession(req).themeMode,
     projectPreferences:
       req.body && Object.prototype.hasOwnProperty.call(req.body, 'projectPreferences')

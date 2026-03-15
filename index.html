@@ -266,13 +266,40 @@
       </div>
       <div class="modal-body">
         <div class="settings-tabs">
-          <button class="tab-btn active" data-tab="api">APIキー</button>
+          <button class="tab-btn active" data-tab="general">一般</button>
           <button class="tab-btn" data-tab="signature">署名</button>
-          <button class="tab-btn" data-tab="general">一般</button>
+          <button class="tab-btn" data-tab="api">APIキー</button>
+        </div>
+
+        <!-- 一般タブ -->
+        <div id="tab-general" class="tab-content active">
+          <div class="settings-section">
+            <h3>ユーザー情報</h3>
+            <div class="form-group">
+              <label>ユーザー名</label>
+              <input type="text" id="user-name" class="form-control" placeholder="山田 太郎" />
+            </div>
+            <div class="form-group">
+              <label>デフォルト翻訳トーン</label>
+              <select id="default-tone" class="form-control">
+                <option value="auto">AI自動判断</option>
+                <option value="formal">ビジネス正式</option>
+                <option value="standard">ビジネス標準</option>
+                <option value="friendly">ややフレンドリー</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>テーマ</label>
+              <select id="theme-mode" class="form-control">
+                <option value="light">ライト</option>
+                <option value="dark">ダーク</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <!-- APIキータブ -->
-        <div id="tab-api" class="tab-content active">
+        <div id="tab-api" class="tab-content hidden">
           <div class="settings-section">
             <h3>AI プロバイダー設定</h3>
             <p class="settings-note">いずれかのAPIキーを設定すると実際のAI翻訳が有効になります。未設定の場合はモック翻訳で動作します。</p>
@@ -347,32 +374,6 @@
           </div>
         </div>
 
-        <!-- 一般タブ -->
-        <div id="tab-general" class="tab-content hidden">
-          <div class="settings-section">
-            <h3>ユーザー情報</h3>
-            <div class="form-group">
-              <label>ユーザー名</label>
-              <input type="text" id="user-name" class="form-control" placeholder="山田 太郎" />
-            </div>
-            <div class="form-group">
-              <label>デフォルト翻訳トーン</label>
-              <select id="default-tone" class="form-control">
-                <option value="auto">AI自動判断</option>
-                <option value="formal">ビジネス正式</option>
-                <option value="standard">ビジネス標準</option>
-                <option value="friendly">ややフレンドリー</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>テーマ</label>
-              <select id="theme-mode" class="form-control">
-                <option value="dark">ダーク</option>
-                <option value="light">ライト</option>
-              </select>
-            </div>
-          </div>
-        </div>
       </div>
       <div class="modal-footer">
         <button id="btn-save-settings" class="btn-primary">保存</button>

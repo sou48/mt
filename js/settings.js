@@ -6,12 +6,12 @@
 const Settings = {
     init() {
         const settings = Storage.getSettings();
-        this.applyTheme(settings.themeMode || 'dark');
+        this.applyTheme(settings.themeMode || 'light');
         document.title = 'MultiTranslate - 多言語翻訳チャット';
     },
 
-    applyTheme(themeMode = 'dark') {
-        const nextTheme = themeMode === 'light' ? 'light' : 'dark';
+    applyTheme(themeMode = 'light') {
+        const nextTheme = themeMode === 'dark' ? 'dark' : 'light';
         document.documentElement.dataset.theme = nextTheme;
     },
 
@@ -28,6 +28,6 @@ const Settings = {
     },
 
     getThemeMode() {
-        return Storage.getSettings().themeMode || 'dark';
+        return Storage.getSettings().themeMode || 'light';
     },
 };
