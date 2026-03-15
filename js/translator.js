@@ -7,23 +7,15 @@ const Translator = {
         const thread = Storage.getThreadById(threadId);
         if (!thread) throw new Error('案件が見つかりません');
 
-        const dictionary = [
-            ...Storage.getSystemDictionary(),
-            ...Storage.getCompanyDictionary(thread.companyId),
-        ];
-
-        let sourceLang = thread.lang !== 'auto' ? thread.lang : (detectedLang || 'auto');
-        let actualDetectedLang = sourceLang;
-        if (sourceLang === 'auto') {
-            actualDetectedLang = await AIGateway.detectLanguage(text);
-        }
+        const dictionary = this._getRelevantDictionary(text, thread.companyId);
+        const sourceLang = thread.lang !== 'auto' ? thread.lang : (detectedLang || 'auto');
 
         const result = await AIGateway.translate({
             text,
             targetLang: 'ja',
-            sourceLang: actualDetectedLang,
+            sourceLang,
             tone: thread.tone || 'auto',
-            context: this._getContextMessages(threadId),
+            context: this._getContextMessages(threadId, text),
             dictionary,
             direction: 'receive',
         });
@@ -33,7 +25,7 @@ const Translator = {
             channelType: channel === 'mail' ? 'email' : 'chat',
             subject: subject || null,
             sourceText: text,
-            sourceLanguage: result.detectedLang || actualDetectedLang,
+            sourceLanguage: result.detectedLang || sourceLang,
             translatedText: result.translatedText,
             translatedLanguage: 'ja',
             japaneseText: result.translatedText,
@@ -52,17 +44,14 @@ const Translator = {
 
         const targetLang = thread.lang === 'auto' ? 'en' : thread.lang;
         const useTone = tone || thread.tone || 'auto';
-        const dictionary = [
-            ...Storage.getSystemDictionary(),
-            ...Storage.getCompanyDictionary(thread.companyId),
-        ];
+        const dictionary = this._getRelevantDictionary(text, thread.companyId);
 
         const result = await AIGateway.translate({
             text,
             targetLang,
             sourceLang: 'ja',
             tone: useTone,
-            context: this._getContextMessages(threadId),
+            context: this._getContextMessages(threadId, text),
             dictionary,
             direction: 'send',
         });
@@ -106,17 +95,14 @@ const Translator = {
         if (!thread) throw new Error('案件が見つかりません');
 
         const textToTranslate = newJaText || message.originalText;
-        const dictionary = [
-            ...Storage.getSystemDictionary(),
-            ...Storage.getCompanyDictionary(thread.companyId),
-        ];
+        const dictionary = this._getRelevantDictionary(textToTranslate, thread.companyId);
 
         const result = await AIGateway.translate({
             text: instruction ? `${textToTranslate}\n\n改善指示: ${instruction}` : textToTranslate,
             targetLang: thread.lang === 'auto' ? 'en' : thread.lang,
             sourceLang: 'ja',
             tone: tone || message.tone || thread.tone || 'auto',
-            context: this._getContextMessages(message.threadId),
+            context: this._getContextMessages(message.threadId, textToTranslate),
             dictionary,
             direction: 'send',
         });
@@ -129,10 +115,48 @@ const Translator = {
         });
     },
 
-    _getContextMessages(threadId) {
+    _getContextMessages(threadId, text = '') {
+        const trimmedText = String(text || '').trim();
+        const maxItems = this._getContextLimit(trimmedText);
+        if (maxItems <= 0) {
+            return [];
+        }
+
         return Storage.getMessages(threadId)
-            .slice(-10)
-            .map((message) => `[${message.direction === 'received' ? '受信' : '送信'}] ${message.originalText.slice(0, 200)}`);
+            .slice(-maxItems)
+            .map((message) => `[${message.direction === 'received' ? '受信' : '送信'}] ${message.originalText.slice(0, 120)}`);
+    },
+
+    _getContextLimit(text) {
+        const length = String(text || '').length;
+        if (length <= 40) return 0;
+        if (length <= 160) return 1;
+        if (length <= 500) return 2;
+        return 3;
+    },
+
+    _getRelevantDictionary(text, companyId) {
+        const normalizedText = String(text || '').trim();
+        if (!normalizedText) {
+            return [];
+        }
+
+        const normalizedTextLower = normalizedText.toLowerCase();
+        const entries = [
+            ...Storage.getSystemDictionary(),
+            ...Storage.getCompanyDictionary(companyId),
+        ];
+
+        const relevantEntries = entries
+            .filter((entry) => {
+                const sourceTerm = String(entry?.ja || entry?.sourceTerm || '').trim();
+                if (!sourceTerm) return false;
+                return normalizedText.includes(sourceTerm) || normalizedTextLower.includes(sourceTerm.toLowerCase());
+            })
+            .sort((a, b) => String(b?.ja || b?.sourceTerm || '').length - String(a?.ja || a?.sourceTerm || '').length)
+            .slice(0, 8);
+
+        return relevantEntries;
     },
 
     async updateThreadLang(threadId, lang) {
