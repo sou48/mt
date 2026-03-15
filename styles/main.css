@@ -646,6 +646,13 @@ a { color: var(--primary-400); text-decoration: none; }
 .usage-link:hover {
   color: var(--primary-500);
 }
+.message-group.sent .usage-link {
+  color: rgba(255,255,255,0.82);
+  font-weight: 600;
+}
+.message-group.sent .usage-link:hover {
+  color: #ffffff;
+}
 .usage-link-preview {
   margin-top: 10px;
 }
