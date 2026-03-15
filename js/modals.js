@@ -3,6 +3,8 @@
  * MultiTranslate
  */
 
+const API_KEY_MASK = '********';
+
 const Modals = {
     init() {
         this._bindCloseButtons();
@@ -144,9 +146,9 @@ const Modals = {
     openSettings() {
         const settings = Storage.getSettings();
         document.getElementById('ai-provider').value = settings.aiProvider || 'mock';
-        document.getElementById('openai-api-key').value = ''; // セキュリティのためクリア
-        document.getElementById('gemini-api-key').value = '';
-        document.getElementById('claude-api-key').value = '';
+        document.getElementById('openai-api-key').value = this._getMaskedApiKeyValue(settings.openaiKey);
+        document.getElementById('gemini-api-key').value = this._getMaskedApiKeyValue(settings.geminiKey);
+        document.getElementById('claude-api-key').value = this._getMaskedApiKeyValue(settings.claudeKey);
         document.getElementById('user-name').value = settings.userName || '';
         document.getElementById('default-tone').value = settings.defaultTone || 'auto';
         document.getElementById('theme-mode').value = settings.themeMode || 'dark';
@@ -170,9 +172,9 @@ const Modals = {
             defaultTone: defaultTone || 'auto',
             themeMode: themeMode || 'dark',
         };
-        if (openaiKey) updated.openaiKey = openaiKey;
-        if (geminiKey) updated.geminiKey = geminiKey;
-        if (claudeKey) updated.claudeKey = claudeKey;
+        if (openaiKey && openaiKey !== API_KEY_MASK) updated.openaiKey = openaiKey;
+        if (geminiKey && geminiKey !== API_KEY_MASK) updated.geminiKey = geminiKey;
+        if (claudeKey && claudeKey !== API_KEY_MASK) updated.claudeKey = claudeKey;
 
         Storage.saveSettings(updated)
             .then(() => {
@@ -461,6 +463,10 @@ const Modals = {
             const el = document.getElementById(id);
             if (el) el.style.display = provider === p ? '' : 'none';
         });
+    },
+
+    _getMaskedApiKeyValue(value) {
+        return value === 'configured' ? API_KEY_MASK : '';
     },
 
     _bindDictTabs() {
