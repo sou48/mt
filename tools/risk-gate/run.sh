@@ -136,6 +136,23 @@ collect_files() {
 
 mapfile -t TARGET_FILES < <(collect_files)
 
+collect_review_files() {
+  local original_scope="$SCOPE"
+
+  if [[ "$SCOPE" == "all" ]]; then
+    if git rev-parse --verify '@{upstream}' >/dev/null 2>&1; then
+      SCOPE="branch"
+    else
+      SCOPE="changes"
+    fi
+  fi
+
+  collect_files
+  SCOPE="$original_scope"
+}
+
+mapfile -t REVIEW_FILES < <(collect_review_files)
+
 filter_scan_files() {
   local -a filtered=()
   local item exclude_path is_excluded
@@ -158,7 +175,7 @@ mapfile -t SCAN_FILES < <(filter_scan_files)
 
 print_section "risk-gate" "project=$RISK_GATE_NAME mode=$MODE scope=$SCOPE"
 if [[ ${#TARGET_FILES[@]} -eq 0 ]]; then
-  warn "No files matched the selected scope; command checks only"
+  pass "No files matched the selected scope; command checks only"
 else
   pass "Scanning ${#TARGET_FILES[@]} file(s)"
 fi
@@ -200,7 +217,7 @@ run_review_path_checks() {
     [[ -z "$spec" ]] && continue
     path="${spec%%:::*}"
     note="${spec#*:::}"
-    for file in "${TARGET_FILES[@]}"; do
+    for file in "${REVIEW_FILES[@]}"; do
       if [[ "$file" == "$path" || "$file" == "$path"/* ]]; then
         warn "$note ($file)"
       fi
