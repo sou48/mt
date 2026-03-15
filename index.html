@@ -496,6 +496,48 @@
     </div>
   </div>
 
+  <!-- トーン変更・再翻訳モーダル -->
+  <div id="tone-retranslate-modal" class="modal-overlay hidden">
+    <div class="modal-container modal-sm">
+      <div class="modal-header">
+        <h2>🎚️ トーン変更・再翻訳</h2>
+        <button id="btn-close-tone-retranslate" class="btn-icon-sm">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </button>
+      </div>
+      <div class="modal-body">
+        <p class="settings-note">再翻訳に使用するトーンを選択してください。</p>
+        <div class="tone-choice-list">
+          <label class="tone-choice-item">
+            <input type="radio" name="retranslate-tone" value="formal" />
+            <span class="tone-choice-text">
+              <strong>ビジネス正式</strong>
+              <small>丁寧で格式高い表現</small>
+            </span>
+          </label>
+          <label class="tone-choice-item">
+            <input type="radio" name="retranslate-tone" value="standard" checked />
+            <span class="tone-choice-text">
+              <strong>ビジネス標準</strong>
+              <small>自然で標準的な業務表現</small>
+            </span>
+          </label>
+          <label class="tone-choice-item">
+            <input type="radio" name="retranslate-tone" value="friendly" />
+            <span class="tone-choice-text">
+              <strong>ややフレンドリー</strong>
+              <small>柔らかく親しみやすい表現</small>
+            </span>
+          </label>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button id="btn-confirm-tone-retranslate" class="btn-primary">再翻訳</button>
+        <button id="btn-cancel-tone-retranslate" class="btn-secondary">キャンセル</button>
+      </div>
+    </div>
+  </div>
+
   <!-- トースト通知 -->
   <div id="toast-container" class="toast-container"></div>
 

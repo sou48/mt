@@ -392,12 +392,18 @@ const Modals = {
             ['btn-close-dictionary', 'dictionary-modal'],
             ['btn-close-ai', null], // AI panel
             ['btn-close-sig-select', 'signature-select-modal'],
+            ['btn-close-tone-retranslate', 'tone-retranslate-modal'],
+            ['btn-cancel-tone-retranslate', 'tone-retranslate-modal'],
         ];
 
         closePairs.forEach(([btnId, modalId]) => {
             const btn = document.getElementById(btnId);
             if (!btn) return;
             btn.addEventListener('click', () => {
+                if (btnId === 'btn-close-tone-retranslate' || btnId === 'btn-cancel-tone-retranslate') {
+                    Chat.closeToneRetranslateModal();
+                    return;
+                }
                 if (modalId) this._hide(modalId);
                 else this.closeAiPanel();
             });
@@ -413,12 +419,17 @@ const Modals = {
         document.getElementById('btn-generate-draft')?.addEventListener('click', () => this.handleGenerateDraft());
         document.getElementById('btn-use-draft')?.addEventListener('click', () => this.handleUseDraft());
         document.getElementById('btn-regen-draft')?.addEventListener('click', () => this.handleGenerateDraft());
+        document.getElementById('btn-confirm-tone-retranslate')?.addEventListener('click', () => Chat.confirmToneRetranslate());
     },
 
     _bindOverlayClicks() {
         document.querySelectorAll('.modal-overlay').forEach(overlay => {
             overlay.addEventListener('click', (e) => {
                 if (e.target === overlay) {
+                    if (overlay.id === 'tone-retranslate-modal') {
+                        Chat.closeToneRetranslateModal();
+                        return;
+                    }
                     overlay.classList.add('hidden');
                 }
             });

@@ -1171,6 +1171,55 @@ a { color: var(--primary-400); text-decoration: none; }
   margin-bottom: 16px;
 }
 
+.tone-choice-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tone-choice-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px 14px;
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  cursor: pointer;
+  transition: border-color var(--transition-fast), background var(--transition-fast), box-shadow var(--transition-fast);
+}
+
+.tone-choice-item:hover {
+  border-color: var(--border-strong);
+  background: var(--bg-card-hover);
+}
+
+.tone-choice-item:has(input:checked) {
+  border-color: var(--border-accent);
+  box-shadow: 0 0 0 3px rgba(72, 89, 242, 0.12);
+}
+
+.tone-choice-item input[type="radio"] {
+  margin-top: 3px;
+  accent-color: var(--primary-500);
+}
+
+.tone-choice-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.tone-choice-text strong {
+  font-size: 13px;
+  color: var(--text-primary);
+}
+
+.tone-choice-text small {
+  font-size: 11px;
+  color: var(--text-secondary);
+}
+
 /* フォームグループ */
 .form-group { margin-bottom: 14px; }
 .form-group label {

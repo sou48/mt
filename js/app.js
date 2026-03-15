@@ -250,9 +250,13 @@ const App = {
         document.addEventListener('keydown', (e) => {
             // Escape でモーダルを閉じる
             if (e.key === 'Escape') {
+                const toneRetranslateVisible = !document.getElementById('tone-retranslate-modal')?.classList.contains('hidden');
                 document.querySelectorAll('.modal-overlay:not(.hidden)').forEach(m => {
                     m.classList.add('hidden');
                 });
+                if (toneRetranslateVisible) {
+                    Chat.closeToneRetranslateModal();
+                }
                 if (!document.getElementById('ai-panel')?.classList.contains('hidden')) {
                     Modals.closeAiPanel();
                 }

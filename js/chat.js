@@ -8,6 +8,7 @@ const Chat = {
     currentCompanyId: null,
     pendingTranslation: null, // 翻訳プレビュー中データ
     pendingAttachments: [],
+    pendingRetranslateToneMessageId: null,
 
     // スレッドを読み込んで表示
     async loadThread(threadId) {
@@ -403,16 +404,41 @@ const Chat = {
     },
 
     async handleRetranslateTone(msgId) {
-        const tone = prompt('翻訳トーンを選択してください:\n1: ビジネス正式 (formal)\n2: ビジネス標準 (standard)\n3: ややフレンドリー (friendly)\n番号を入力:');
-        const toneMap = { '1': 'formal', '2': 'standard', '3': 'friendly' };
-        const selectedTone = toneMap[tone?.trim()];
-        if (!selectedTone) return;
+        this.pendingRetranslateToneMessageId = msgId;
+        const defaultTone = document.getElementById('tone-selector')?.value || 'standard';
+        const target = document.querySelector(`input[name="retranslate-tone"][value="${defaultTone}"]`)
+            || document.querySelector('input[name="retranslate-tone"][value="standard"]');
+        if (target) {
+            target.checked = true;
+        }
+        document.getElementById('tone-retranslate-modal')?.classList.remove('hidden');
+    },
+
+    closeToneRetranslateModal() {
+        this.pendingRetranslateToneMessageId = null;
+        document.getElementById('tone-retranslate-modal')?.classList.add('hidden');
+    },
+
+    async confirmToneRetranslate() {
+        const msgId = this.pendingRetranslateToneMessageId;
+        if (!msgId) {
+            this.closeToneRetranslateModal();
+            return;
+        }
+
+        const selectedTone = document.querySelector('input[name="retranslate-tone"]:checked')?.value;
+        if (!selectedTone) {
+            Toast.show('トーンを選択してください', 'error');
+            return;
+        }
 
         const translationEl = document.getElementById(`translation-${msgId}`);
         if (translationEl) {
             Dom.setMarkup(translationEl, `翻訳中 <span class="translating-dots"><span></span><span></span><span></span></span>`);
             translationEl.classList.add('translating');
         }
+
+        this.closeToneRetranslateModal();
 
         try {
             const updated = await Translator.retranslate({ messageId: msgId, tone: selectedTone });
