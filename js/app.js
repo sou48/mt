@@ -62,6 +62,7 @@ const App = {
 
     _bindLoginEvents() {
         document.getElementById('btn-login')?.addEventListener('click', () => this.handleLogin());
+        document.getElementById('btn-test-login')?.addEventListener('click', () => this.handleTestLogin());
         document.getElementById('login-password')?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') {
                 event.preventDefault();
@@ -85,6 +86,17 @@ const App = {
             Toast.show('ログインしました', 'success');
         } catch (error) {
             Toast.show(`ログインエラー: ${error.message}`, 'error');
+        }
+    },
+
+    async handleTestLogin() {
+        try {
+            await ApiClient.testLogin();
+            await Storage.reset();
+            await this._startAuthenticatedApp();
+            Toast.show('テストユーザーでログインしました', 'success');
+        } catch (error) {
+            Toast.show(`テストログインエラー: ${error.message}`, 'error');
         }
     },
 

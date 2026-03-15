@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { getPrismaClient } = require('../../lib/prisma');
+const { env } = require('../../config/env');
 const {
   buildPasswordResetUrl,
   generatePasswordResetToken,
@@ -11,6 +12,11 @@ const { toPublicUser } = require('../../utils/serialize');
 
 const router = express.Router();
 const PASSWORD_MIN_LENGTH = 8;
+const TEST_LOGIN_COMPANY_NAME = process.env.TEST_LOGIN_COMPANY_NAME || 'MTテスト会社';
+const TEST_LOGIN_PROJECT_NAME = process.env.TEST_LOGIN_PROJECT_NAME || '動作検証案件';
+const TEST_LOGIN_EMAIL = process.env.TEST_LOGIN_EMAIL || 'tester@example.com';
+const TEST_LOGIN_DISPLAY_NAME = process.env.TEST_LOGIN_DISPLAY_NAME || '動作確認ユーザー';
+const TEST_LOGIN_PASSWORD = process.env.TEST_LOGIN_PASSWORD || 'test-login-only';
 
 function getConfiguredPrisma(res) {
   const prisma = getPrismaClient();
@@ -27,6 +33,118 @@ function getConfiguredPrisma(res) {
 
 function validatePassword(password) {
   return typeof password === 'string' && password.length >= PASSWORD_MIN_LENGTH;
+}
+
+async function ensureTestLoginUser(prisma) {
+  let company = await prisma.company.findFirst({
+    where: {
+      name: TEST_LOGIN_COMPANY_NAME,
+      deletedAt: null,
+    },
+  });
+
+  if (!company) {
+    company = await prisma.company.create({
+      data: {
+        name: TEST_LOGIN_COMPANY_NAME,
+      },
+    });
+  }
+
+  let user = await prisma.user.findFirst({
+    where: {
+      email: TEST_LOGIN_EMAIL,
+      deletedAt: null,
+    },
+    include: {
+      company: true,
+    },
+  });
+
+  if (!user) {
+    user = await prisma.user.create({
+      data: {
+        companyId: company.id,
+        email: TEST_LOGIN_EMAIL,
+        displayName: TEST_LOGIN_DISPLAY_NAME,
+        role: 'admin',
+        passwordHash: await bcrypt.hash(TEST_LOGIN_PASSWORD, 10),
+      },
+      include: {
+        company: true,
+      },
+    });
+  }
+
+  let project = await prisma.project.findFirst({
+    where: {
+      companyId: company.id,
+      name: TEST_LOGIN_PROJECT_NAME,
+      deletedAt: null,
+    },
+  });
+
+  if (!project) {
+    project = await prisma.project.create({
+      data: {
+        companyId: company.id,
+        name: TEST_LOGIN_PROJECT_NAME,
+        createdByUserId: user.id,
+        userProjects: {
+          create: {
+            userId: user.id,
+          },
+        },
+      },
+    });
+  } else {
+    const assignment = await prisma.userProject.findFirst({
+      where: {
+        userId: user.id,
+        projectId: project.id,
+        deletedAt: null,
+      },
+    });
+
+    if (!assignment) {
+      await prisma.userProject.create({
+        data: {
+          userId: user.id,
+          projectId: project.id,
+        },
+      });
+    }
+  }
+
+  const signature = await prisma.signature.findFirst({
+    where: {
+      userId: user.id,
+      name: 'テスト署名',
+      deletedAt: null,
+    },
+  });
+
+  if (!signature) {
+    await prisma.signature.create({
+      data: {
+        userId: user.id,
+        name: 'テスト署名',
+        japaneseText: `${TEST_LOGIN_DISPLAY_NAME}\nMultiTranslate`,
+        partnerText: `${TEST_LOGIN_DISPLAY_NAME}\nMultiTranslate`,
+        isDefault: true,
+      },
+    });
+  }
+
+  return prisma.user.findFirst({
+    where: {
+      id: user.id,
+      deletedAt: null,
+    },
+    include: {
+      company: true,
+    },
+  });
 }
 
 router.post('/login', async (req, res) => {
@@ -63,6 +181,33 @@ router.post('/login', async (req, res) => {
   if (!matched) {
     return res.status(401).json({
       message: 'メールアドレスまたはパスワードが正しくありません。',
+    });
+  }
+
+  req.session.userId = user.id.toString();
+  req.session.userRole = user.role;
+
+  return res.json({
+    user: toPublicUser(user),
+  });
+});
+
+router.post('/test-login', async (req, res) => {
+  if (env.nodeEnv === 'production') {
+    return res.status(404).json({
+      message: 'この機能は利用できません。',
+    });
+  }
+
+  const prisma = getConfiguredPrisma(res);
+  if (!prisma) {
+    return;
+  }
+
+  const user = await ensureTestLoginUser(prisma);
+  if (!user) {
+    return res.status(500).json({
+      message: 'テストユーザーの準備に失敗しました。',
     });
   }
 

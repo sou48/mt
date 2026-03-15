@@ -40,6 +40,12 @@ const ApiClient = {
     });
   },
 
+  testLogin() {
+    return this.request('/auth/test-login', {
+      method: 'POST',
+    });
+  },
+
   logout() {
     return this.request('/auth/logout', { method: 'POST' });
   },
