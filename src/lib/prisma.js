@@ -13,9 +13,9 @@ let healthCache = {
 async function detectDatabaseMode() {
   if (!env.databaseUrl) {
     return {
-      ok: env.nodeEnv !== 'production',
-      mode: env.nodeEnv !== 'production' ? 'mock' : 'unconfigured',
-      message: env.nodeEnv !== 'production' ? 'DB 未設定のためメモリストアで起動します。' : '',
+      ok: false,
+      mode: 'unconfigured',
+      message: 'DATABASE_URL が未設定です。',
     };
   }
 
@@ -27,7 +27,7 @@ async function detectDatabaseMode() {
     await prisma.$queryRaw`SELECT 1`;
     return { ok: true, mode: 'database', message: '' };
   } catch (error) {
-    if (env.nodeEnv !== 'production') {
+    if (env.allowMockDb) {
       return {
         ok: true,
         mode: 'mock',
@@ -56,12 +56,8 @@ async function getHealthState(force = false) {
 }
 
 function getPrismaClient() {
-  if (env.nodeEnv !== 'production') {
-    return mockPrisma;
-  }
-
   if (!env.databaseUrl) {
-    return null;
+    return env.allowMockDb ? mockPrisma : null;
   }
 
   if (!prisma) {
@@ -84,7 +80,7 @@ async function checkDatabaseHealth() {
     return {
       ok: true,
       status: 'fallback',
-      message: 'DB 未接続のためメモリストアで動作中です。',
+      message: 'ALLOW_MOCK_DB=true のためメモリストアで動作中です。',
     };
   }
 

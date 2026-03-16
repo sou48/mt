@@ -8,7 +8,7 @@ services:
     restart: unless-stopped
     environment:
       PORT: 3001
-      DATABASE_URL: postgresql://${MT_DB_USER:-mt_user}:${MT_DB_PASSWORD:-mt_local_password}@mt-db:5432/${MT_DB_NAME:-mt}?schema=public
+      DATABASE_URL: postgresql://${MT_DB_USER:-mt_user}:${MT_DB_PASSWORD:-mt_local_password}@mt-db:5432/${MT_DB_NAME:-mt_test}?schema=public
       SESSION_COOKIE_SECURE: ${SESSION_COOKIE_SECURE:-false}
     depends_on:
       mt-db:
@@ -26,11 +26,11 @@ services:
     image: postgres:16-alpine
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${MT_DB_NAME:-mt}
+      POSTGRES_DB: ${MT_DB_NAME:-mt_test}
       POSTGRES_USER: ${MT_DB_USER:-mt_user}
       POSTGRES_PASSWORD: ${MT_DB_PASSWORD:-mt_local_password}
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${MT_DB_USER:-mt_user} -d ${MT_DB_NAME:-mt}"]
+      test: ["CMD-SHELL", "pg_isready -U ${MT_DB_USER:-mt_user} -d ${MT_DB_NAME:-mt_test}"]
       interval: 10s
       timeout: 3s
       retries: 5

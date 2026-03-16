@@ -46,6 +46,8 @@ npm run db:generate
 npm run dev
 ```
 
+ローカル起動でも PostgreSQL への接続が必須です。既定の接続先はテスト用 DB `mt_test` です。
+
 ## 技術スタック
 
 - **フロントエンド**: HTML / CSS / JavaScript（バニラ）
