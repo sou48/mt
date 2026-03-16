@@ -395,6 +395,13 @@ a { color: var(--primary-400); text-decoration: none; }
   border-left: 3px solid var(--primary-400);
 }
 .thread-item.active .thread-name { color: var(--primary-400); }
+.thread-name-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
 .thread-icon {
   width: 8px;
   height: 8px;
@@ -410,6 +417,78 @@ a { color: var(--primary-400); text-decoration: none; }
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+}
+.thread-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 22px;
+  height: 22px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+.thread-edit-btn svg {
+  width: 12px;
+  height: 12px;
+}
+.thread-edit-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-glass);
+  border-color: var(--border-default);
+}
+.thread-inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.thread-inline-input {
+  min-width: 0;
+  flex: 1;
+  height: 28px;
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
+  padding: 0 10px;
+}
+.thread-inline-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91, 82, 240, 0.14);
+}
+.thread-inline-action {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  font-size: 10px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 9px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+.thread-inline-action:hover {
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.thread-inline-action.save {
+  color: var(--primary-500);
+  border-color: rgba(91, 82, 240, 0.24);
+  background: rgba(91, 82, 240, 0.08);
+}
+.thread-inline-action.save:hover {
+  background: rgba(91, 82, 240, 0.14);
 }
 .thread-unread {
   font-size: 10px;
@@ -1519,6 +1598,12 @@ select.form-control { cursor: pointer; }
     flex-wrap: wrap;
   }
   .company-inline-input {
+    width: 100%;
+  }
+  .thread-inline-edit {
+    flex-wrap: wrap;
+  }
+  .thread-inline-input {
     width: 100%;
   }
 }

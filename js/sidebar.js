@@ -7,6 +7,7 @@ const Sidebar = {
     currentCompanyId: null,
     currentThreadId: null,
     editingCompanyId: null,
+    editingThreadId: null,
 
     init() {
         this.render();
@@ -119,10 +120,41 @@ const Sidebar = {
 
     _renderThreadItem(thread) {
         const isActive = this.currentThreadId === thread.id;
+        const isEditing = this.editingThreadId === String(thread.id);
         return `
     <div class="thread-item ${isActive ? 'active' : ''}" data-thread-id="${thread.id}" data-company-id="${thread.companyId}">
       <div class="thread-icon"></div>
-      <span class="thread-name" title="${this._escHtml(thread.name)}">${this._escHtml(thread.name)}</span>
+      <div class="thread-name-row">
+        ${isEditing
+            ? `
+              <div class="thread-inline-edit" data-thread-edit-wrap="${thread.id}">
+                <input
+                  type="text"
+                  class="thread-inline-input"
+                  data-thread-edit-input="${thread.id}"
+                  value="${this._escAttr(thread.name)}"
+                  aria-label="案件名を編集"
+                >
+                <button type="button" class="thread-inline-action save" data-thread-edit-save="${thread.id}">保存</button>
+                <button type="button" class="thread-inline-action cancel" data-thread-edit-cancel="${thread.id}">取消</button>
+              </div>
+            `
+            : `
+              <span class="thread-name" title="${this._escHtml(thread.name)}">${this._escHtml(thread.name)}</span>
+              <button
+                type="button"
+                class="thread-edit-btn"
+                data-thread-edit="${thread.id}"
+                aria-label="${this._escAttr(thread.name)} を編集"
+                title="案件名を編集"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                  <path d="M12 20h9"/>
+                  <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                </svg>
+              </button>
+            `}
+      </div>
     </div>`;
     },
 
@@ -183,6 +215,46 @@ const Sidebar = {
                 const threadId = el.dataset.threadId;
                 const companyId = el.dataset.companyId;
                 this.selectThread(threadId, companyId);
+            });
+        });
+
+        document.querySelectorAll('[data-thread-edit]').forEach((el) => {
+            el.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                this.editingThreadId = el.dataset.threadEdit;
+                await this.render(document.getElementById('sidebar-search')?.value || '');
+                this._focusThreadEditor(this.editingThreadId);
+            });
+        });
+
+        document.querySelectorAll('[data-thread-edit-cancel]').forEach((el) => {
+            el.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                this.editingThreadId = null;
+                await this.render(document.getElementById('sidebar-search')?.value || '');
+            });
+        });
+
+        document.querySelectorAll('[data-thread-edit-save]').forEach((el) => {
+            el.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                await this._handleThreadRename(el.dataset.threadEditSave);
+            });
+        });
+
+        document.querySelectorAll('[data-thread-edit-input]').forEach((el) => {
+            el.addEventListener('click', (event) => event.stopPropagation());
+            el.addEventListener('keydown', async (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    await this._handleThreadRename(el.dataset.threadEditInput);
+                    return;
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    this.editingThreadId = null;
+                    await this.render(document.getElementById('sidebar-search')?.value || '');
+                }
             });
         });
 
@@ -256,6 +328,13 @@ const Sidebar = {
         input.select();
     },
 
+    _focusThreadEditor(threadId) {
+        const input = document.querySelector(`[data-thread-edit-input="${threadId}"]`);
+        if (!input) return;
+        input.focus();
+        input.select();
+    },
+
     async _handleCompanyRename(companyId) {
         const input = document.querySelector(`[data-company-edit-input="${companyId}"]`);
         const name = input?.value?.trim();
@@ -280,6 +359,41 @@ const Sidebar = {
         } catch (error) {
             Toast.show(`会社名更新エラー: ${error.message}`, 'error');
             this._focusCompanyEditor(companyId);
+        }
+    },
+
+    async _handleThreadRename(threadId) {
+        const input = document.querySelector(`[data-thread-edit-input="${threadId}"]`);
+        const name = input?.value?.trim();
+        if (!name) {
+            Toast.show('案件名を入力してください', 'error');
+            this._focusThreadEditor(threadId);
+            return;
+        }
+
+        try {
+            const existing = Storage.getThreadById(threadId);
+            if (!existing) {
+                throw new Error('案件が見つかりません。');
+            }
+            const { thread, warnings } = await Storage.saveThread({
+                id: threadId,
+                companyId: existing.companyId,
+                name,
+            });
+            this.editingThreadId = null;
+            if (String(this.currentThreadId) === String(thread.id)) {
+                const headerThreadName = document.getElementById('header-thread-name');
+                if (headerThreadName) {
+                    headerThreadName.textContent = thread.name;
+                }
+            }
+            await this.render(document.getElementById('sidebar-search')?.value || '');
+            warnings.forEach((warning) => Toast.show(warning.message, 'info'));
+            Toast.show('案件名を更新しました', 'success');
+        } catch (error) {
+            Toast.show(`案件名更新エラー: ${error.message}`, 'error');
+            this._focusThreadEditor(threadId);
         }
     },
 
