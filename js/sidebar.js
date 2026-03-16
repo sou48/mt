@@ -6,6 +6,7 @@
 const Sidebar = {
     currentCompanyId: null,
     currentThreadId: null,
+    editingCompanyId: null,
 
     init() {
         this.render();
@@ -47,6 +48,7 @@ const Sidebar = {
         const initial = getCompanyInitial(company.name);
         const langLabel = getLangLabel(company.lang);
         const normalizedFilter = String(filterText || '').toLowerCase();
+        const isEditing = this.editingCompanyId === String(company.id);
         const companyMatchesFilter = normalizedFilter
             ? company.name.toLowerCase().includes(normalizedFilter)
             : false;
@@ -65,7 +67,37 @@ const Sidebar = {
             ${initial}
           </div>
           <div class="company-info">
-            <div class="company-display-name" title="${this._escHtml(company.name)}">${this._escHtml(company.name)}</div>
+            <div class="company-title-row">
+              ${isEditing
+                  ? `
+                    <div class="company-inline-edit" data-company-edit-wrap="${company.id}">
+                      <input
+                        type="text"
+                        class="company-inline-input"
+                        data-company-edit-input="${company.id}"
+                        value="${this._escAttr(company.name)}"
+                        aria-label="会社名を編集"
+                      >
+                      <button type="button" class="company-inline-action save" data-company-edit-save="${company.id}">保存</button>
+                      <button type="button" class="company-inline-action cancel" data-company-edit-cancel="${company.id}">取消</button>
+                    </div>
+                  `
+                  : `
+                    <div class="company-display-name" title="${this._escHtml(company.name)}">${this._escHtml(company.name)}</div>
+                    <button
+                      type="button"
+                      class="company-edit-btn"
+                      data-company-edit="${company.id}"
+                      aria-label="${this._escAttr(company.name)} を編集"
+                      title="会社名を編集"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M12 20h9"/>
+                        <path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/>
+                      </svg>
+                    </button>
+                  `}
+            </div>
             <span class="company-lang-badge">${langLabel}</span>
           </div>
         </div>
@@ -97,10 +129,50 @@ const Sidebar = {
     _bindGroupEvents() {
         // 会社グループの開閉
         document.querySelectorAll('[data-company-toggle]').forEach(el => {
-            el.addEventListener('click', (e) => {
+            el.addEventListener('click', () => {
                 const companyId = el.dataset.companyToggle;
                 this.currentCompanyId = this.currentCompanyId === companyId ? null : companyId;
                 this.render(document.getElementById('sidebar-search')?.value || '');
+            });
+        });
+
+        document.querySelectorAll('[data-company-edit]').forEach((el) => {
+            el.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                this.editingCompanyId = el.dataset.companyEdit;
+                await this.render(document.getElementById('sidebar-search')?.value || '');
+                this._focusCompanyEditor(this.editingCompanyId);
+            });
+        });
+
+        document.querySelectorAll('[data-company-edit-cancel]').forEach((el) => {
+            el.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                this.editingCompanyId = null;
+                await this.render(document.getElementById('sidebar-search')?.value || '');
+            });
+        });
+
+        document.querySelectorAll('[data-company-edit-save]').forEach((el) => {
+            el.addEventListener('click', async (event) => {
+                event.stopPropagation();
+                await this._handleCompanyRename(el.dataset.companyEditSave);
+            });
+        });
+
+        document.querySelectorAll('[data-company-edit-input]').forEach((el) => {
+            el.addEventListener('click', (event) => event.stopPropagation());
+            el.addEventListener('keydown', async (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    await this._handleCompanyRename(el.dataset.companyEditInput);
+                    return;
+                }
+                if (event.key === 'Escape') {
+                    event.preventDefault();
+                    this.editingCompanyId = null;
+                    await this.render(document.getElementById('sidebar-search')?.value || '');
+                }
             });
         });
 
@@ -177,7 +249,45 @@ const Sidebar = {
         overlay?.classList.remove('active');
     },
 
+    _focusCompanyEditor(companyId) {
+        const input = document.querySelector(`[data-company-edit-input="${companyId}"]`);
+        if (!input) return;
+        input.focus();
+        input.select();
+    },
+
+    async _handleCompanyRename(companyId) {
+        const input = document.querySelector(`[data-company-edit-input="${companyId}"]`);
+        const name = input?.value?.trim();
+        if (!name) {
+            Toast.show('会社名を入力してください', 'error');
+            this._focusCompanyEditor(companyId);
+            return;
+        }
+
+        try {
+            const { company, warnings } = await Storage.saveCompany({ id: companyId, name });
+            this.editingCompanyId = null;
+            if (String(this.currentCompanyId) === String(company.id)) {
+                const headerCompanyName = document.getElementById('header-company-name');
+                if (headerCompanyName) {
+                    headerCompanyName.textContent = company.name;
+                }
+            }
+            await this.render(document.getElementById('sidebar-search')?.value || '');
+            warnings.forEach((warning) => Toast.show(warning.message, 'info'));
+            Toast.show('会社名を更新しました', 'success');
+        } catch (error) {
+            Toast.show(`会社名更新エラー: ${error.message}`, 'error');
+            this._focusCompanyEditor(companyId);
+        }
+    },
+
     _escHtml(str) {
         return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    },
+
+    _escAttr(str) {
+        return this._escHtml(str).replace(/'/g, '&#39;');
     },
 };

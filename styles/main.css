@@ -273,6 +273,12 @@ a { color: var(--primary-400); text-decoration: none; }
   flex-shrink: 0;
 }
 .company-info { min-width: 0; }
+.company-title-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
 .company-display-name {
   font-size: 13px;
   font-weight: 600;
@@ -280,6 +286,77 @@ a { color: var(--primary-400); text-decoration: none; }
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+.company-edit-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: 1px solid transparent;
+  border-radius: var(--radius-full);
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+.company-edit-btn svg {
+  width: 13px;
+  height: 13px;
+}
+.company-edit-btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-glass);
+  border-color: var(--border-default);
+}
+.company-inline-edit {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+.company-inline-input {
+  min-width: 0;
+  width: 132px;
+  height: 30px;
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  background: var(--bg-input);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  padding: 0 10px;
+}
+.company-inline-input:focus {
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(91, 82, 240, 0.14);
+}
+.company-inline-action {
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-full);
+  background: var(--bg-glass);
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  padding: 7px 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all var(--transition-fast);
+}
+.company-inline-action:hover {
+  background: var(--bg-glass-strong);
+  color: var(--text-primary);
+  border-color: var(--border-strong);
+}
+.company-inline-action.save {
+  color: var(--primary-500);
+  border-color: rgba(91, 82, 240, 0.24);
+  background: rgba(91, 82, 240, 0.08);
+}
+.company-inline-action.save:hover {
+  background: rgba(91, 82, 240, 0.14);
 }
 .company-lang-badge {
   font-size: 10px;
@@ -1438,6 +1515,12 @@ select.form-control { cursor: pointer; }
   .message-group { max-width: 88%; }
   .ai-panel { width: 100%; }
   .lang-selector-wrap { display: none; }
+  .company-inline-edit {
+    flex-wrap: wrap;
+  }
+  .company-inline-input {
+    width: 100%;
+  }
 }
 
 /* モバイルサイドバーオーバーレイ */
