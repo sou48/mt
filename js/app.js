@@ -25,9 +25,15 @@ const Toast = {
 };
 
 const App = {
+    sidebarWidthKey: 'mt.sidebarWidth',
+    defaultSidebarWidth: 300,
+    minSidebarWidth: 240,
+    maxSidebarWidth: 520,
+
     async init() {
         this._bindLoginEvents();
         this._appendMobileOverlay();
+        this._initSidebarResizer();
 
         try {
             await Storage.init();
@@ -106,6 +112,85 @@ const App = {
 
     _hideLogin() {
         document.getElementById('login-overlay')?.classList.add('hidden');
+    },
+
+    _initSidebarResizer() {
+        const handle = document.getElementById('sidebar-resizer');
+        const sidebar = document.getElementById('sidebar');
+        if (!handle || !sidebar) return;
+
+        const applyWidth = (value, persist = false) => {
+            const width = Math.max(this.minSidebarWidth, Math.min(this.maxSidebarWidth, Math.round(value)));
+            document.documentElement.style.setProperty('--sidebar-width', `${width}px`);
+            if (persist) {
+                window.localStorage.setItem(this.sidebarWidthKey, String(width));
+            }
+        };
+
+        const savedWidth = Number(window.localStorage.getItem(this.sidebarWidthKey) || this.defaultSidebarWidth);
+        applyWidth(Number.isFinite(savedWidth) ? savedWidth : this.defaultSidebarWidth);
+
+        let isResizing = false;
+        let startX = 0;
+        let startWidth = this.defaultSidebarWidth;
+
+        const stopResize = () => {
+            if (!isResizing) return;
+            isResizing = false;
+            document.body.classList.remove('sidebar-resizing');
+            const currentWidth = sidebar.getBoundingClientRect().width;
+            applyWidth(currentWidth, true);
+        };
+
+        handle.addEventListener('pointerdown', (event) => {
+            if (window.innerWidth <= 900) return;
+            isResizing = true;
+            startX = event.clientX;
+            startWidth = sidebar.getBoundingClientRect().width;
+            document.body.classList.add('sidebar-resizing');
+            handle.setPointerCapture?.(event.pointerId);
+        });
+
+        window.addEventListener('pointermove', (event) => {
+            if (!isResizing) return;
+            const nextWidth = startWidth + (event.clientX - startX);
+            applyWidth(nextWidth);
+        });
+
+        window.addEventListener('pointerup', stopResize);
+        window.addEventListener('pointercancel', stopResize);
+        window.addEventListener('resize', () => {
+            if (window.innerWidth <= 900) {
+                document.documentElement.style.removeProperty('--sidebar-width');
+                return;
+            }
+            const width = Number(window.localStorage.getItem(this.sidebarWidthKey) || this.defaultSidebarWidth);
+            applyWidth(width);
+        });
+
+        handle.addEventListener('dblclick', () => {
+            applyWidth(this.defaultSidebarWidth, true);
+        });
+
+        handle.addEventListener('keydown', (event) => {
+            if (window.innerWidth <= 900) return;
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                applyWidth(sidebar.getBoundingClientRect().width - 16, true);
+            }
+            if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                applyWidth(sidebar.getBoundingClientRect().width + 16, true);
+            }
+            if (event.key === 'Home') {
+                event.preventDefault();
+                applyWidth(this.minSidebarWidth, true);
+            }
+            if (event.key === 'End') {
+                event.preventDefault();
+                applyWidth(this.maxSidebarWidth, true);
+            }
+        });
     },
 
     // ===== ヘッダーイベント =====

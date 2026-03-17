@@ -170,6 +170,36 @@ a { color: var(--primary-400); text-decoration: none; }
   z-index: 10;
   transition: transform var(--transition-normal);
 }
+.sidebar-resizer {
+  width: 10px;
+  flex: 0 0 10px;
+  position: relative;
+  cursor: col-resize;
+  background: transparent;
+  z-index: 12;
+}
+.sidebar-resizer::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 4px;
+  width: 2px;
+  border-radius: var(--radius-full);
+  background: transparent;
+  transition: background var(--transition-fast), box-shadow var(--transition-fast);
+}
+.sidebar-resizer:hover::before,
+.sidebar-resizer:focus-visible::before,
+body.sidebar-resizing .sidebar-resizer::before {
+  background: rgba(91, 82, 240, 0.35);
+  box-shadow: 0 0 0 4px rgba(91, 82, 240, 0.08);
+}
+body.sidebar-resizing,
+body.sidebar-resizing * {
+  cursor: col-resize !important;
+  user-select: none !important;
+}
 
 /* ロゴ */
 .sidebar-header {
@@ -1577,6 +1607,9 @@ select.form-control { cursor: pointer; }
     z-index: 50;
     transform: translateX(-100%);
     box-shadow: var(--shadow-lg);
+  }
+  .sidebar-resizer {
+    display: none;
   }
   .sidebar.open { transform: translateX(0); }
   .main-area { width: 100%; }
