@@ -721,7 +721,12 @@ body.sidebar-resizing * {
 .message-group.sent .msg-original { color: rgba(255,255,255,0.75); }
 .message-group.sent .msg-divider { border-color: rgba(255,255,255,0.2); }
 .message-group.sent .msg-translation { color: #fff; }
-.message-group.sent .msg-meta { color: rgba(255,255,255,0.5); justify-content: flex-end; }
+.message-group.sent .msg-meta { color: rgba(255,255,255,0.84); justify-content: flex-end; }
+.message-group.sent .msg-channel-badge {
+  color: rgba(255,255,255,0.92);
+  background: rgba(255,255,255,0.16);
+  border: 1px solid rgba(255,255,255,0.16);
+}
 
 /* バブル本体 */
 .bubble-wrap {
@@ -833,11 +838,12 @@ body.sidebar-resizing * {
   color: var(--primary-500);
 }
 .message-group.sent .usage-link {
-  color: rgba(255,255,255,0.82);
+  color: rgba(255,255,255,0.96);
   font-weight: 600;
 }
 .message-group.sent .usage-link:hover {
   color: #ffffff;
+  text-decoration-thickness: 2px;
 }
 .usage-link-preview {
   margin-top: 10px;
@@ -855,6 +861,17 @@ body.sidebar-resizing * {
 .msg-status-badge.draft {
   background: rgba(255,165,0,0.15);
   color: #FFB347;
+}
+.message-group.sent .msg-status-badge {
+  background: rgba(16, 185, 129, 0.22);
+  color: #f2fff9;
+  border: 1px solid rgba(167, 243, 208, 0.32);
+  font-weight: 700;
+}
+.message-group.sent .msg-status-badge.draft {
+  background: rgba(245, 158, 11, 0.22);
+  color: #fff6e8;
+  border: 1px solid rgba(253, 230, 138, 0.28);
 }
 
 /* メッセージアクション */

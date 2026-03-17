@@ -4,6 +4,8 @@
   "description": "MultiTranslate - 多言語翻訳チャットシステム",
   "main": "server.js",
   "scripts": {
+    "predev": "npm run db:generate",
+    "prestart": "npm run db:generate",
     "risk:gate": "./tools/risk-gate/run.sh --mode local",
     "risk:gate:all": "./tools/risk-gate/run.sh --mode local --scope all",
     "risk:gate:ci": "./tools/risk-gate/run.sh --mode ci --scope all",
