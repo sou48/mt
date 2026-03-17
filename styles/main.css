@@ -1425,6 +1425,20 @@ body.sidebar-resizing * {
   line-height: 1.6;
   margin-bottom: 16px;
 }
+.settings-inline-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 8px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--primary-500);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.settings-inline-link:hover {
+  color: var(--primary-400);
+}
 
 .tone-choice-list {
   display: flex;

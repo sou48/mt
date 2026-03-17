@@ -163,6 +163,7 @@ const Modals = {
         this._renderSignatureList();
         this._show('settings-modal');
         this._updateApiKeyVisibility(settings.aiProvider || 'mock');
+        this._updateApiUsageLinkVisibility(settings.aiProvider || 'mock');
     },
 
     handleSaveSettings() {
@@ -468,6 +469,7 @@ const Modals = {
         // APIプロバイダ変更時にキー欄を切替
         document.getElementById('ai-provider')?.addEventListener('change', (e) => {
             this._updateApiKeyVisibility(e.target.value);
+            this._updateApiUsageLinkVisibility(e.target.value);
         });
     },
 
@@ -477,6 +479,12 @@ const Modals = {
             const el = document.getElementById(id);
             if (el) el.style.display = provider === p ? '' : 'none';
         });
+    },
+
+    _updateApiUsageLinkVisibility(provider) {
+        const link = document.getElementById('openai-usage-link');
+        if (!link) return;
+        link.classList.toggle('hidden', provider !== 'openai');
     },
 
     _getMaskedApiKeyValue(value) {
