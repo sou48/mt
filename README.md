@@ -48,6 +48,16 @@ npm run dev
 
 ローカル起動でも PostgreSQL への接続が必須です。既定の接続先はテスト用 DB `mt_test` です。
 
+ローカル Docker を使わず、ConoHa 上のテスト用 DB をそのまま使う場合は、別ターミナルで先に DB トンネルを開いてから起動します。
+
+```bash
+# 1. テストDBへの SSH トンネルを開始
+npm run db:tunnel:test
+
+# 2. 別ターミナルでアプリ起動
+npm run dev
+```
+
 ## 技術スタック
 
 - **フロントエンド**: HTML / CSS / JavaScript（バニラ）

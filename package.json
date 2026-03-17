@@ -13,6 +13,7 @@
     "db:migrate:dev": "prisma migrate dev",
     "db:migrate:deploy": "prisma migrate deploy",
     "db:seed:admin": "node scripts/bootstrap-admin.js",
+    "db:tunnel:test": "./tools/db/open-test-db-tunnel.sh",
     "docker:version": "./tools/docker/docker.sh version",
     "docker:local:up": "./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml up -d",
     "docker:local:down": "./tools/docker/docker-compose.sh -f docker-compose.yml -f docker-compose.local.yml down",
