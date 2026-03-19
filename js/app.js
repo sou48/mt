@@ -31,6 +31,7 @@ const App = {
     maxSidebarWidth: 520,
 
     async init() {
+        this._applyTestLoginVisibility();
         this._bindLoginEvents();
         this._appendMobileOverlay();
         this._initSidebarResizer();
@@ -75,6 +76,12 @@ const App = {
                 this.handleLogin();
             }
         });
+    },
+
+    _applyTestLoginVisibility() {
+        if (window.location.hostname === 'mt.trialworks.jp') {
+            document.getElementById('btn-test-login')?.classList.add('hidden');
+        }
     },
 
     async handleLogin() {

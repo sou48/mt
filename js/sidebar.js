@@ -5,6 +5,7 @@
 
 const Sidebar = {
     currentCompanyId: null,
+    openCompanyIds: [],
     currentThreadId: null,
     editingCompanyId: null,
     editingThreadId: null,
@@ -37,7 +38,7 @@ const Sidebar = {
 
         Dom.setMarkup(container, filtered.map(company => {
             const companyThreads = threads.filter(t => t.companyId === company.id);
-            const isOpen = this.currentCompanyId === company.id;
+            const isOpen = this._isCompanyOpen(company.id);
             return this._renderCompanyGroup(company, companyThreads, isOpen, filterText);
         }).join(''));
 
@@ -163,7 +164,7 @@ const Sidebar = {
         document.querySelectorAll('[data-company-toggle]').forEach(el => {
             el.addEventListener('click', () => {
                 const companyId = el.dataset.companyToggle;
-                this.currentCompanyId = this.currentCompanyId === companyId ? null : companyId;
+                this._toggleCompanyOpen(companyId);
                 this.render(document.getElementById('sidebar-search')?.value || '');
             });
         });
@@ -286,6 +287,7 @@ const Sidebar = {
     async selectThread(threadId, companyId) {
         this.currentThreadId = threadId;
         this.currentCompanyId = companyId;
+        this._openCompany(companyId);
         await this.render(document.getElementById('sidebar-search')?.value || '');
         await Chat.loadThread(threadId);
 
@@ -296,6 +298,7 @@ const Sidebar = {
     async addCompany(company) {
         const result = await Storage.saveCompany(company);
         this.currentCompanyId = result.company.id;
+        this._openCompany(result.company.id);
         await this.render();
         return result;
     },
@@ -319,6 +322,26 @@ const Sidebar = {
         const overlay = document.getElementById('sidebar-overlay');
         sidebar?.classList.remove('open');
         overlay?.classList.remove('active');
+    },
+
+    _isCompanyOpen(companyId) {
+        return this.openCompanyIds.includes(String(companyId));
+    },
+
+    _openCompany(companyId) {
+        const normalizedCompanyId = String(companyId);
+        if (!this._isCompanyOpen(normalizedCompanyId)) {
+            this.openCompanyIds.push(normalizedCompanyId);
+        }
+    },
+
+    _toggleCompanyOpen(companyId) {
+        const normalizedCompanyId = String(companyId);
+        if (this._isCompanyOpen(normalizedCompanyId)) {
+            this.openCompanyIds = this.openCompanyIds.filter((id) => id !== normalizedCompanyId);
+            return;
+        }
+        this.openCompanyIds.push(normalizedCompanyId);
     },
 
     _focusCompanyEditor(companyId) {
