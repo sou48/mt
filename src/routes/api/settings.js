@@ -1,6 +1,7 @@
 const express = require('express');
-const { getAiSettingsFromSession, saveAiSettingsToSession } = require('../../lib/ai-service');
+const { getAiSettingsFromSession, getAiSettingsFromUser, normalizeAiSettings, saveAiSettingsToSession } = require('../../lib/ai-service');
 const { requireCurrentUser } = require('../../lib/api-helpers');
+const { getPrismaClient } = require('../../lib/prisma');
 
 const router = express.Router();
 
@@ -21,8 +22,11 @@ router.get('/settings', async (req, res) => {
   const currentUser = await requireCurrentUser(req, res);
   if (!currentUser) return;
 
+  const persistedSettings = getAiSettingsFromUser(currentUser);
+  saveAiSettingsToSession(req, persistedSettings);
+
   return res.json({
-    settings: maskSettings(getAiSettingsFromSession(req)),
+    settings: maskSettings(persistedSettings),
   });
 });
 
@@ -30,7 +34,7 @@ router.patch('/settings', async (req, res) => {
   const currentUser = await requireCurrentUser(req, res);
   if (!currentUser) return;
 
-  const nextSettings = saveAiSettingsToSession(req, {
+  const nextSettings = normalizeAiSettings({
     aiProvider: req.body?.aiProvider || getAiSettingsFromSession(req).aiProvider,
     openaiKey:
       req.body && Object.prototype.hasOwnProperty.call(req.body, 'openaiKey')
@@ -61,6 +65,24 @@ router.patch('/settings', async (req, res) => {
         ? req.body.projectPreferences || {}
         : getAiSettingsFromSession(req).projectPreferences,
   });
+
+  const prisma = getPrismaClient();
+  if (!prisma) {
+    return res.status(503).json({
+      message: 'データベースが未設定です。',
+    });
+  }
+
+  await prisma.user.update({
+    where: {
+      id: currentUser.id,
+    },
+    data: {
+      aiSettingsJson: nextSettings,
+    },
+  });
+
+  saveAiSettingsToSession(req, nextSettings);
 
   return res.json({
     settings: maskSettings(nextSettings),

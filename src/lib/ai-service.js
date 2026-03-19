@@ -63,6 +63,17 @@ function saveAiSettingsToSession(req, partialSettings) {
   return getAiSettingsFromSession(req);
 }
 
+function normalizeAiSettings(settings) {
+  return {
+    ...DEFAULT_SETTINGS,
+    ...(settings || {}),
+  };
+}
+
+function getAiSettingsFromUser(user) {
+  return normalizeAiSettings(user?.aiSettingsJson);
+}
+
 function getLangLabel(code) {
   const map = {
     auto: '自動',
@@ -645,6 +656,8 @@ module.exports = {
   detectLanguage,
   generateDraft,
   getAiSettingsFromSession,
+  getAiSettingsFromUser,
+  normalizeAiSettings,
   saveAiSettingsToSession,
   translate,
 };

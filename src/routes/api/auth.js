@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcrypt');
 const { getPrismaClient } = require('../../lib/prisma');
+const { getAiSettingsFromUser } = require('../../lib/ai-service');
 const { env } = require('../../config/env');
 const {
   buildPasswordResetUrl,
@@ -38,6 +39,7 @@ function validatePassword(password) {
 function finalizeLogin(req, res, user) {
   req.session.userId = user.id.toString();
   req.session.userRole = user.role;
+  req.session.aiSettings = getAiSettingsFromUser(user);
 
   req.session.save((error) => {
     if (error) {

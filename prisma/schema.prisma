@@ -51,6 +51,7 @@ model User {
   displayName              String                   @map("display_name") @db.VarChar(255)
   role                     UserRole
   passwordHash             String                   @map("password_hash") @db.VarChar(255)
+  aiSettingsJson           Json?                    @map("ai_settings_json")
   company                  Company                  @relation(fields: [companyId], references: [id])
   createdProjects          Project[]                @relation("ProjectCreatedBy")
   registeredMessages       Message[]                @relation("MessageRegisteredBy")
