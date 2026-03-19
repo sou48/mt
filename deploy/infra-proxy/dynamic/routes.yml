@@ -26,7 +26,7 @@ http:
     mt-service:
       loadBalancer:
         servers:
-          - url: http://mt-web:80
+          - url: http://mt-web:3001
 
     oos-service:
       loadBalancer:
