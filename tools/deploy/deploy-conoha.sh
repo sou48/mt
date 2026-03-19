@@ -80,6 +80,8 @@ ssh_exec "
 set -euo pipefail
 cd '$DEPLOY_REMOTE_DIR'
 docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T mt-web npm run db:migrate:deploy
+docker compose -f docker-compose.yml -f docker-compose.prod.yml exec -T mt-web npm run db:seed:admin
 docker compose -f docker-compose.yml -f docker-compose.prod.yml ps
 "
 

@@ -3,12 +3,85 @@ const { env } = require('../config/env');
 const { mockPrisma } = require('./mock-prisma');
 
 let prisma = null;
+let resilientPrisma = null;
 let healthCache = {
   checkedAt: 0,
   ok: false,
   mode: 'unknown',
   message: '',
 };
+
+function isRecoverableDatabaseError(error) {
+  return (
+    error?.name === 'PrismaClientInitializationError' ||
+    error?.code === 'P1001' ||
+    error?.code === 'P1002'
+  );
+}
+
+function createResilientDelegate(target, fallback, label) {
+  if (!target || typeof target !== 'object' || !fallback) {
+    return target;
+  }
+
+  return new Proxy(target, {
+    get(delegateTarget, prop, receiver) {
+      const value = Reflect.get(delegateTarget, prop, receiver);
+      const fallbackValue = fallback[prop];
+
+      if (typeof value !== 'function') {
+        return value;
+      }
+
+      return async (...args) => {
+        try {
+          return await value.apply(delegateTarget, args);
+        } catch (error) {
+          if (!env.allowMockDb || !isRecoverableDatabaseError(error) || typeof fallbackValue !== 'function') {
+            throw error;
+          }
+
+          console.warn(`[prisma] ${label}.${String(prop)} でDB接続に失敗したため mock DB にフォールバックします。`);
+          return fallbackValue.apply(fallback, args);
+        }
+      };
+    },
+  });
+}
+
+function createResilientPrismaClient(client) {
+  return new Proxy(client, {
+    get(target, prop, receiver) {
+      if (prop === '__isMock') {
+        return false;
+      }
+
+      const value = Reflect.get(target, prop, receiver);
+      const fallbackValue = mockPrisma[prop];
+
+      if (typeof value === 'function') {
+        return async (...args) => {
+          try {
+            return await value.apply(target, args);
+          } catch (error) {
+            if (!env.allowMockDb || !isRecoverableDatabaseError(error) || typeof fallbackValue !== 'function') {
+              throw error;
+            }
+
+            console.warn(`[prisma] ${String(prop)} でDB接続に失敗したため mock DB にフォールバックします。`);
+            return fallbackValue.apply(mockPrisma, args);
+          }
+        };
+      }
+
+      if (value && typeof value === 'object' && fallbackValue && typeof fallbackValue === 'object') {
+        return createResilientDelegate(value, fallbackValue, String(prop));
+      }
+
+      return value;
+    },
+  });
+}
 
 async function detectDatabaseMode() {
   if (!env.databaseUrl) {
@@ -64,7 +137,15 @@ function getPrismaClient() {
     prisma = new PrismaClient();
   }
 
-  return prisma;
+  if (!env.allowMockDb) {
+    return prisma;
+  }
+
+  if (!resilientPrisma) {
+    resilientPrisma = createResilientPrismaClient(prisma);
+  }
+
+  return resilientPrisma;
 }
 
 async function checkDatabaseHealth() {
